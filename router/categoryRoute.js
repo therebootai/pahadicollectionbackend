@@ -6,6 +6,8 @@ const router = express.Router();
 router.post("/create", categoryController.createCategory);
 router.get("/get", categoryController.getCategories);
 router.put("/update", categoryController.updateCategory);
+router.put("/upload-image", categoryController.updateImage);
+
 router.delete("/delete/:categoryId", categoryController.deleteCategory);
 
 module.exports = router;

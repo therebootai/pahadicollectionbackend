@@ -132,23 +132,19 @@ exports.updateCategory = async (req, res) => {
       return res.status(400).json({ message: "Category ID is required." });
     }
 
-    // Find category by categoryId
     const category = await Categories.findOne({ categoryId });
     if (!category) {
       return res.status(404).json({ message: "Category not found." });
     }
 
-    // Update main category name
     if (mainCategory) {
       category.mainCategory = mainCategory;
     }
 
-    // Update main category isActive status
     if (typeof isActive !== "undefined") {
       category.isActive = isActive;
     }
 
-    // Handle category image update
     if (categoryImage) {
       if (category.categoryImage && category.categoryImage.public_id) {
         await deleteFile(category.categoryImage.public_id);
@@ -171,47 +167,67 @@ exports.updateCategory = async (req, res) => {
       };
     }
 
-    // Update subcategories & subsubcategories while keeping names intact
     if (subcategories && Array.isArray(subcategories)) {
-      category.subcategories = category.subcategories.map((existingSub) => {
-        const updatedSub = subcategories.find(
-          (sub) =>
-            sub.subcategoriesname === existingSub.subcategoriesname &&
-            sub._id.toString() === existingSub._id.toString()
+      subcategories.forEach((updatedSub) => {
+        // Find the existing subcategory or create a new one if it doesn't exist
+        const existingSub = category.subcategories.find(
+          (sub) => sub._id.toString() === updatedSub._id.toString()
         );
 
-        if (updatedSub) {
-          // Update subcategory isActive
+        if (existingSub) {
+          // Update subcategory fields
+          if (updatedSub.subcategoriesname) {
+            existingSub.subcategoriesname = updatedSub.subcategoriesname;
+          }
           if (typeof updatedSub.isActive !== "undefined") {
             existingSub.isActive = updatedSub.isActive;
           }
 
-          // Update subsubcategories while keeping names
+          // Update or create subsubcategories if they exist
           if (
             updatedSub.subsubcategories &&
             Array.isArray(updatedSub.subsubcategories)
           ) {
-            existingSub.subsubcategories = existingSub.subsubcategories.map(
-              (existingSubSub) => {
-                const updatedSubSub = updatedSub.subsubcategories.find(
-                  (subsub) =>
-                    subsub.subsubcategoriesname ===
-                      existingSubSub.subsubcategoriesname &&
-                    subsub._id.toString() === existingSubSub._id.toString()
-                );
+            updatedSub.subsubcategories.forEach((updatedSubSub) => {
+              const existingSubSub = existingSub.subsubcategories.find(
+                (subsub) =>
+                  subsub._id.toString() === updatedSubSub._id.toString()
+              );
 
-                if (updatedSubSub) {
-                  // Update subsubcategory isActive
-                  if (typeof updatedSubSub.isActive !== "undefined") {
-                    existingSubSub.isActive = updatedSubSub.isActive;
-                  }
+              if (existingSubSub) {
+                // Update existing subsubcategory
+                if (updatedSubSub.subsubcategoriesname) {
+                  existingSubSub.subsubcategoriesname =
+                    updatedSubSub.subsubcategoriesname;
                 }
-                return existingSubSub;
+                if (typeof updatedSubSub.isActive !== "undefined") {
+                  existingSubSub.isActive = updatedSubSub.isActive;
+                }
+              } else {
+                // Add new subsubcategory if it doesn't exist
+                existingSub.subsubcategories.push({
+                  subsubcategoriesname: updatedSubSub.subsubcategoriesname,
+                  isActive: updatedSubSub.isActive,
+                });
               }
-            );
+            });
           }
+        } else {
+          // Add new subcategory if it doesn't exist
+          const newSubcategory = {
+            _id: updatedSub._id, // Ensure we are passing _id if it's a new one
+            subcategoriesname: updatedSub.subcategoriesname,
+            isActive: updatedSub.isActive,
+            subsubcategories: updatedSub.subsubcategories
+              ? updatedSub.subsubcategories.map((subsub) => ({
+                  subsubcategoriesname: subsub.subsubcategoriesname,
+                  isActive: subsub.isActive,
+                }))
+              : [], // Empty array if no subsubcategories provided
+          };
+
+          category.subcategories.push(newSubcategory);
         }
-        return existingSub;
       });
     }
 
@@ -225,6 +241,57 @@ exports.updateCategory = async (req, res) => {
     res
       .status(500)
       .json({ message: "Internal server error.", error: error.message });
+  }
+};
+
+exports.updateImage = async (req, res) => {
+  try {
+    const { categoryId } = req.body;
+    const categoryImage = req.files?.categoryImage;
+
+    if (!categoryId || !categoryImage) {
+      return res.status(400).json({
+        message: "Category ID and image are required to update the image.",
+      });
+    }
+
+    const category = await Categories.findOne({ categoryId });
+    if (!category) {
+      return res.status(404).json({ message: "Category not found." });
+    }
+
+    if (category.categoryImage && category.categoryImage.public_id) {
+      await deleteFile(category.categoryImage.public_id);
+    }
+
+    const fileUploadResult = await uploadFile(
+      categoryImage.tempFilePath,
+      categoryImage.mimetype
+    );
+
+    if (!fileUploadResult.secure_url || !fileUploadResult.public_id) {
+      return res.status(500).json({
+        message: "Failed to upload image to Cloudinary.",
+      });
+    }
+
+    category.categoryImage = {
+      secure_url: fileUploadResult.secure_url,
+      public_id: fileUploadResult.public_id,
+    };
+
+    await category.save();
+
+    res.status(200).json({
+      message: "Category image updated successfully.",
+      categoryImage: category.categoryImage,
+    });
+  } catch (error) {
+    console.error("Error uploading category image:", error);
+    res.status(500).json({
+      message: "Internal server error.",
+      error: error.message,
+    });
   }
 };
 
