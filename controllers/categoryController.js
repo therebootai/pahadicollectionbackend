@@ -171,7 +171,7 @@ exports.updateCategory = async (req, res) => {
       subcategories.forEach((updatedSub) => {
         // Find the existing subcategory or create a new one if it doesn't exist
         const existingSub = category.subcategories.find(
-          (sub) => sub._id.toString() === updatedSub._id.toString()
+          (sub) => sub._id && sub._id.toString() === updatedSub._id?.toString()
         );
 
         if (existingSub) {
@@ -191,7 +191,8 @@ exports.updateCategory = async (req, res) => {
             updatedSub.subsubcategories.forEach((updatedSubSub) => {
               const existingSubSub = existingSub.subsubcategories.find(
                 (subsub) =>
-                  subsub._id.toString() === updatedSubSub._id.toString()
+                  subsub._id &&
+                  subsub._id.toString() === updatedSubSub._id?.toString() // Check if _id exists
               );
 
               if (existingSubSub) {
@@ -215,7 +216,7 @@ exports.updateCategory = async (req, res) => {
         } else {
           // Add new subcategory if it doesn't exist
           const newSubcategory = {
-            _id: updatedSub._id, // Ensure we are passing _id if it's a new one
+            _id: updatedSub._id,
             subcategoriesname: updatedSub.subcategoriesname,
             isActive: updatedSub.isActive,
             subsubcategories: updatedSub.subsubcategories
@@ -223,7 +224,7 @@ exports.updateCategory = async (req, res) => {
                   subsubcategoriesname: subsub.subsubcategoriesname,
                   isActive: subsub.isActive,
                 }))
-              : [], // Empty array if no subsubcategories provided
+              : [],
           };
 
           category.subcategories.push(newSubcategory);
