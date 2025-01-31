@@ -16,6 +16,7 @@ if (!fs.existsSync(tempFilePath)) {
 MongoDbConnect();
 
 const categoryRoutes = require("./router/categoryRoute");
+const pickupRoutes = require("./router/pickupRoute");
 
 app.use(cors());
 
@@ -26,6 +27,7 @@ app.use(express.urlencoded({ extended: true }));
 app.use(bodyParser.json());
 
 app.use("/api/category", categoryRoutes);
+app.use("/api/pickups", pickupRoutes);
 
 app.listen(port, () => {
   console.log(`Port starts on  ${port}`);
