@@ -68,10 +68,30 @@ exports.getCategories = async (req, res) => {
     if (startDate || endDate) {
       const dateFilter = {};
       if (startDate) {
-        dateFilter.$gte = new Date(new Date(startDate).toISOString());
+        dateFilter.$gte = new Date(
+          Date.UTC(
+            new Date(startDate).getUTCFullYear(),
+            new Date(startDate).getUTCMonth(),
+            new Date(startDate).getUTCDate(),
+            0,
+            0,
+            0,
+            0
+          )
+        );
       }
       if (endDate) {
-        dateFilter.$lte = new Date(new Date(endDate).toISOString());
+        dateFilter.$lte = new Date(
+          Date.UTC(
+            new Date(endDate).getUTCFullYear(),
+            new Date(endDate).getUTCMonth(),
+            new Date(endDate).getUTCDate(),
+            23,
+            59,
+            59,
+            999
+          )
+        );
       }
       filter.createdAt = dateFilter;
     }
@@ -107,6 +127,8 @@ exports.getCategories = async (req, res) => {
         categoryImage: category.categoryImage,
         isActive: category.isActive,
         subcategories: filteredSubcategoriesWithSubsubcategories, // Include filtered subcategories
+        createdAt: category.createdAt,
+        updatedAt: category.updatedAt,
       };
     });
 
