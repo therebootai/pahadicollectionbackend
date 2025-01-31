@@ -17,7 +17,11 @@ MongoDbConnect();
 
 const categoryRoutes = require("./router/categoryRoute");
 const pickupRoutes = require("./router/pickupRoute");
+
 const componentRouter = require("./router/componentRoute");
+
+const variableRoutes = require("./router/variableRoute");
+
 
 app.use(cors());
 
@@ -29,7 +33,11 @@ app.use(bodyParser.json());
 
 app.use("/api/category", categoryRoutes);
 app.use("/api/pickups", pickupRoutes);
+
 app.use("/api/component", componentRouter);
+
+app.use("/api/variables", variableRoutes);
+
 
 app.listen(port, () => {
   console.log(`Port starts on  ${port}`);
