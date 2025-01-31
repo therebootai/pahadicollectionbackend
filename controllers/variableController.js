@@ -98,3 +98,57 @@ exports.getVariables = async (req, res) => {
     });
   }
 };
+
+exports.updateVariable = async (req, res) => {
+  try {
+    const { variableId } = req.params;
+    const updateData = req.body;
+    if (updateData.variableType && Array.isArray(updateData.variableType)) {
+      updateData.variableType.forEach((item) => {
+        if (item._id && item.varType) {
+          Variables.updateOne(
+            { variableId, "variableType._id": item._id },
+            { $set: { "variableType.$.varType": item.varType } },
+            { runValidators: true }
+          );
+        }
+      });
+    }
+
+    const updateVariableData = await Variables.findOneAndUpdate(
+      { variableId },
+      { $set: updateData },
+      { new: true, runValidators: true }
+    );
+
+    if (!updateVariableData) {
+      return res.status(404).json({ message: "Variable not found" });
+    }
+
+    res.status(200).json({
+      message: "Variable updated successfully.",
+      data: updateVariableData,
+    });
+  } catch (error) {
+    console.error("Error updating Variable:", error);
+    res.status(500).json({
+      message: "Error updating Variable details",
+      error: error.message,
+    });
+  }
+};
+
+exports.deleteVariable = async (req, res) => {
+  try {
+    const { variableId } = req.params;
+
+    const variableDelete = await Variables.findOne({ variableId });
+    if (!variableDelete) {
+      return res.status(404).json({ message: "Variable Data not Found" });
+    }
+    await Variables.findOneAndDelete({ variableId });
+    res.status(200).json({ message: "Variable Data Delete Successfully" });
+  } catch (error) {
+    res.status(500).json({ message: "Error Deleteing Variable Data", error });
+  }
+};
