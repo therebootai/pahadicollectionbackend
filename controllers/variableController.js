@@ -85,10 +85,13 @@ exports.getVariables = async (req, res) => {
 
     res.status(200).json({
       message: "Variable Fetch Successfully",
-      totalCount,
-      totalPages: Math.ceil(totalCount / pageLimit),
-      currentPage: pageNumber,
-      variabledata: variableData,
+      pagination: {
+        totalCount,
+        limit: pageLimit,
+        totalPages: Math.ceil(totalCount / pageLimit),
+        currentPage: pageNumber,
+      },
+      data: variableData,
     });
   } catch (error) {
     console.error("Error fetching Variables:", error);
