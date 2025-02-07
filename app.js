@@ -21,7 +21,7 @@ const pickupRoutes = require("./router/pickupRoute");
 const componentRouter = require("./router/componentRoute");
 
 const variableRoutes = require("./router/variableRoute");
-
+const productRouter = require("./router/productRoute");
 
 app.use(cors());
 
@@ -38,6 +38,7 @@ app.use("/api/component", componentRouter);
 
 app.use("/api/variables", variableRoutes);
 
+app.use("/api/products", productRouter);
 
 app.listen(port, () => {
   console.log(`Port starts on  ${port}`);
