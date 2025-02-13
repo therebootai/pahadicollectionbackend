@@ -1,4 +1,5 @@
 const mongoose = require("mongoose");
+const bcrypt = require("bcrypt");
 
 const customerSchema = new mongoose.Schema(
   {
@@ -52,7 +53,14 @@ const customerSchema = new mongoose.Schema(
     wishlist: [
       {
         type: mongoose.Schema.Types.ObjectId,
-        ref: "Wishlists",
+        ref: "Products",
+        default: [],
+      },
+    ],
+    payments: [
+      {
+        type: mongoose.Schema.Types.ObjectId,
+        ref: "Payments",
         default: [],
       },
     ],
@@ -61,6 +69,24 @@ const customerSchema = new mongoose.Schema(
     timestamps: true,
   }
 );
+
+customerSchema.pre("save", async function (next) {
+  if (!this.isModified("password")) {
+    return next();
+  }
+  try {
+    const salt = await bcrypt.genSalt(10);
+    this.password = await bcrypt.hash(this.password, salt);
+    next();
+  } catch (err) {
+    next(err instanceof Error ? err : new Error("Unknown error occurred"));
+  }
+});
+
+// Instance method to check if the entered password matches
+customerSchema.methods.matchPassword = async function (enteredPassword) {
+  return bcrypt.compare(enteredPassword, this.password);
+};
 
 module.exports =
   mongoose.models.Customers || mongoose.model("Customers", customerSchema);

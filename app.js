@@ -2,6 +2,7 @@ const express = require("express");
 const app = express();
 const bodyParser = require("body-parser");
 const cors = require("cors");
+const cookieParser = require("cookie-parser");
 const MongoDbConnect = require("./connection");
 require("dotenv").config();
 const fileUpload = require("express-fileupload");
@@ -22,9 +23,10 @@ const componentRouter = require("./router/componentRoute");
 
 const variableRoutes = require("./router/variableRoute");
 const productRouter = require("./router/productRoute");
+const customerRouter = require("./router/customerRoute");
 
 app.use(cors());
-
+app.use(cookieParser());
 app.use(express.json());
 app.use(fileUpload({ useTempFiles: true, tempFileDir: tempFilePath }));
 app.use(express.urlencoded({ extended: true }));
@@ -39,6 +41,8 @@ app.use("/api/component", componentRouter);
 app.use("/api/variables", variableRoutes);
 
 app.use("/api/products", productRouter);
+
+app.use("/api/customers", customerRouter);
 
 app.listen(port, () => {
   console.log(`Port starts on  ${port}`);
