@@ -1,5 +1,5 @@
 const jwt = require("jsonwebtoken");
-export function generateToken(payload) {
+exports.generateToken = (payload) => {
   try {
     if (!process.env.SECRET_KEY) throw new Error("SECRET_KEY is missing");
 
@@ -12,9 +12,9 @@ export function generateToken(payload) {
     );
     return null;
   }
-}
+};
 
-export const authenticateUser = (req, res, next) => {
+exports.authenticateUser = (req, res, next) => {
   const token = req.cookies?.token; // Get token from cookies
 
   if (!token) {
