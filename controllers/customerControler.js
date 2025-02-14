@@ -8,18 +8,28 @@ exports.registerNewCustomer = async (req, res) => {
   try {
     const { name, email, mobile, address, password } = req.body;
 
-    const { profileImage } = req.files.profileImage[0];
+    let profileImage = null;
 
-    if (!name || !email || !mobile || !address || !password || !profileImage) {
+    if (req.files && req.files?.profileImage) {
+      profileImage = req.files?.profileImage[0];
+    }
+
+    if (!name || !email || !mobile || !address || !password) {
       return res.status(400).json({ message: "All fields are required." });
     }
 
-    const profileImageResult = await uploadFile(
-      profileImage.tempFilePath,
-      profileImage.mimeType
-    );
-    if (profileImageResult.error) {
-      return res.status(500).json({ message: "Error uploading product image" });
+    let profileImageResult = null;
+
+    if (profileImage) {
+      profileImageResult = await uploadFile(
+        profileImage.tempFilePath,
+        profileImage.mimeType
+      );
+      if (profileImageResult.error) {
+        return res
+          .status(500)
+          .json({ message: "Error uploading customer profile image" });
+      }
     }
 
     const customerId = await generateCustomId(
@@ -35,10 +45,12 @@ exports.registerNewCustomer = async (req, res) => {
       mobile,
       address,
       password,
-      profileImage: {
-        secure_url: profileImageResult.secure_url,
-        public_id: profileImageResult.public_id,
-      },
+      profileImage: profileImageResult
+        ? {
+            secure_url: profileImageResult.secure_url,
+            public_id: profileImageResult.public_id,
+          }
+        : null,
     });
 
     const savedCustomer = await newCustomer.save();
@@ -58,6 +70,11 @@ exports.registerNewCustomer = async (req, res) => {
     });
   } catch (error) {
     console.error("Error creating new Customer details:", error);
+    if (error.code === 11000) {
+      return res.status(400).json({
+        error: "Customer already exists.",
+      });
+    }
     return res.status(500).json({
       message: "Internal Server Error",
       error: error.message,
@@ -313,6 +330,103 @@ exports.removeFromWishlist = async (req, res) => {
       wishlist: customer.wishlist,
     });
   } catch (error) {
+    console.error("Error removing product from wishlist:", error);
+    res.status(500).json({ message: "Server error", error: error.message });
+  }
+};
+exports.getAllCart = async (req, res) => {
+  try {
+    const { minPrice, maxPrice, category, name } = req.query;
+
+    // Find all customers and populate the wishlist
+    const customers = await customerModel
+      .find()
+      .populate({
+        path: "cart",
+        match: {
+          ...(minPrice && { price: { $gte: minPrice } }),
+          ...(maxPrice && { price: { $lte: maxPrice } }),
+          ...(category && { category: category }),
+          ...(name && { name: { $regex: name, $options: "i" } }),
+        },
+      })
+      .exec();
+
+    // Extract wishlist items from all customers
+    const allCartsItems = customers
+      .flatMap((customer) => customer.cart)
+      .filter(Boolean);
+
+    res.status(200).json({ cart: allCartsItems });
+  } catch (error) {
+    console.error("Error getting carts details:", error);
+    return res.status(500).json({
+      message: "Internal Server Error",
+      error: error.message,
+    });
+  }
+};
+
+exports.addToCart = async (req, res) => {
+  try {
+    const { customerId, productId } = req.body;
+    const customer = await customerModel.findOne({
+      $or: [
+        { customerId: customerId },
+        {
+          _id: mongoose.Types.ObjectId.isValid(customerId)
+            ? customerId
+            : undefined,
+        },
+      ],
+    });
+    if (!customer) {
+      return res.status(404).json({ message: "Customer not found" });
+    }
+    if (!customer.cart.includes(productId)) {
+      customer.cart.push(productId);
+      await customer.save();
+    }
+    const updatedCustomer = await customerModel
+      .findOne({
+        $or: [
+          { customerId: customerId },
+          {
+            _id: mongoose.Types.ObjectId.isValid(customerId)
+              ? customerId
+              : undefined,
+          },
+        ],
+      })
+      .populate("cart");
+    res.status(200).json({
+      message: "Product added to wishlist",
+      wishlist: updatedCustomer.cart,
+    });
+  } catch (error) {
+    res.status(500).json({ message: "Server error", error: error.message });
+  }
+};
+
+exports.removeFromCart = async (req, res) => {
+  try {
+    const { customerId, productId } = req.body;
+    const customer = await customerModel
+      .findOne({ customerId })
+      .populate("cart");
+    if (!customer) {
+      return res.status(404).json({ message: "Customer not found" });
+    }
+    customer.cart = customer.cart.filter(
+      (product) => product._id.toString() !== productId
+    );
+    await customer.save();
+    res.status(200).json({
+      message: "Product removed from cart",
+      cart: customer.cart,
+    });
+  } catch (error) {
+    console.error("Error removing product from cart:", error);
     res.status(500).json({ message: "Server error", error: error.message });
   }
 };

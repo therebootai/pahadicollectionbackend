@@ -24,6 +24,7 @@ const componentRouter = require("./router/componentRoute");
 const variableRoutes = require("./router/variableRoute");
 const productRouter = require("./router/productRoute");
 const customerRouter = require("./router/customerRoute");
+const couponRouter = require("./router/couponRoute");
 
 app.use(cors());
 app.use(cookieParser());
@@ -43,6 +44,8 @@ app.use("/api/variables", variableRoutes);
 app.use("/api/products", productRouter);
 
 app.use("/api/customers", customerRouter);
+
+app.use("/api/coupons", couponRouter);
 
 app.listen(port, () => {
   console.log(`Port starts on  ${port}`);

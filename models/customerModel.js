@@ -32,8 +32,8 @@ const customerSchema = new mongoose.Schema(
       default: false,
     },
     profileImage: {
-      secure_url: { type: String, required: true },
-      public_id: { type: String, required: true },
+      secure_url: { type: String },
+      public_id: { type: String },
     },
     address: [{ type: Object, required: true }],
     cart: [
