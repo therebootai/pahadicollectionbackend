@@ -193,3 +193,37 @@ exports.deleteOrder = async (req, res) => {
     res.status(500).json({ message: "Internal Server Error", error: error });
   }
 };
+
+exports.updateOrderDetails = async (req, res) => {
+  try {
+    const { id } = req.params;
+    const { products, status, delivery_location } = req.body;
+    const updatedOrder = await orderModel.findOneAndUpdate(
+      {
+        $or: [
+          { _id: mongoose.Types.ObjectId.isValid(id) ? id : null },
+          { couponId: id },
+        ],
+      },
+      {
+        $set: {
+          ...(products && { products }),
+          ...(status && { status }),
+          ...(delivery_location && { delivery_location }),
+        },
+      },
+      { new: true, runValidators: true }
+    );
+
+    if (!updatedOrder) {
+      return res.status(404).json({ message: "Order not found" });
+    }
+    res.status(200).json({
+      message: "Order details updated successfully",
+      order: updatedOrder,
+    });
+  } catch (error) {
+    console.log("Error updating order details:", error);
+    res.status(500).json({ message: "Internal Server Error", error: error });
+  }
+};

@@ -112,7 +112,7 @@ exports.getAllCustomers = async (req, res) => {
       .populate("cart")
       .populate("orders")
       .populate("wishlist")
-      .populate("paymets");
+      .populate("payments");
 
     const totalCustomers = await customerModel.countDocuments(query);
 
@@ -161,7 +161,8 @@ exports.searchCustomers = async (req, res) => {
       .limit(parseInt(limit))
       .populate("cart")
       .populate("orders")
-      .populate("wishlist");
+      .populate("wishlist")
+      .populate("payments");
 
     const totalCustomers = await customerModel.countDocuments(query);
 
@@ -195,7 +196,8 @@ exports.getCustomerById = async (req, res) => {
       })
       .populate("cart")
       .populate("orders")
-      .populate("wishlist");
+      .populate("wishlist")
+      .populate("payments");
 
     if (!customer) {
       return res.status(404).json({ message: "Customer not found" });
