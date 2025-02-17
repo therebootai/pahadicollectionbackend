@@ -26,6 +26,7 @@ const productRouter = require("./router/productRoute");
 const customerRouter = require("./router/customerRoute");
 const couponRouter = require("./router/couponRoute");
 const orderRouter = require("./router/orderRoute");
+const userRoute = require("./router/userRoute");
 
 app.use(cors());
 app.use(cookieParser());
@@ -49,6 +50,7 @@ app.use("/api/customers", customerRouter);
 app.use("/api/coupons", couponRouter);
 
 app.use("/api/orders", orderRouter);
+app.use("/api/users", userRoute);
 
 app.listen(port, () => {
   console.log(`Port starts on  ${port}`);
