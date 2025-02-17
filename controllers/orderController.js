@@ -2,6 +2,7 @@ const mongoose = require("mongoose");
 
 const orderModel = require("../models/orderModel");
 const paymentModel = require("../models/paymentModel");
+const generateCustomId = require("../middlewares/ganerateCustomId");
 
 exports.createNewOrder = async (req, res) => {
   try {
