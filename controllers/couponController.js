@@ -1,3 +1,4 @@
+const generateCustomId = require("../middlewares/ganerateCustomId");
 const couponModel = require("../models/couponModel");
 const mongoose = require("mongoose");
 
@@ -10,9 +11,17 @@ exports.createNewCoupon = async (req, res) => {
       startDate,
       endDate,
       products,
+      upToAmount,
     } = req.body;
 
-    if (!couponName || !discount || !minimumAmount || !startDate || !endDate) {
+    if (
+      !couponName ||
+      !discount ||
+      !minimumAmount ||
+      !startDate ||
+      !endDate ||
+      !upToAmount
+    ) {
       return res.status(400).json({ message: "All fields are required." });
     }
 
@@ -29,7 +38,8 @@ exports.createNewCoupon = async (req, res) => {
       minimumAmount,
       startDate,
       endDate,
-      products: products ? JSON.parse(products) : [],
+      products: Array.isArray(products) ? products : [],
+      upToAmount,
     });
     const savedCoupon = await newCoupon.save();
 
@@ -204,16 +214,17 @@ exports.updateCouponById = async (req, res) => {
       updateData.usedBy = [...new Set(updateData.usedBy)];
     }
 
-    const updatedCoupon = await Coupon.findOneAndUpdate(
-      {
-        $or: [
-          { _id: mongoose.Types.ObjectId.isValid(id) ? id : null },
-          { couponId: id },
-        ],
-      },
-      { $set: updateData },
-      { new: true, runValidators: true }
-    )
+    const updatedCoupon = await couponModel
+      .findOneAndUpdate(
+        {
+          $or: [
+            { _id: mongoose.Types.ObjectId.isValid(id) ? id : null },
+            { couponId: id },
+          ],
+        },
+        { $set: updateData },
+        { new: true, runValidators: true }
+      )
       .populate("products")
       .populate("usedBy");
 
