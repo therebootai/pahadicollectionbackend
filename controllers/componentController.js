@@ -1,11 +1,13 @@
-const { uploadFile } = require("../middlewares/cloudinary");
+const mongoose = require("mongoose");
+const { uploadFile, deleteFile } = require("../middlewares/cloudinary");
 const generateCustomId = require("../middlewares/ganerateCustomId");
 const components = require("../models/components");
 
 exports.createComponent = async (req, res) => {
   try {
     const { name, type } = req.body;
-    const component_image = req.files?.component_image;
+
+    const component_image = req.files.component_image;
 
     if (!name || !type || !component_image) {
       return res.status(400).json({
@@ -61,20 +63,20 @@ exports.getAllComponents = async (req, res) => {
   try {
     // Destructure query parameters
     const {
-      name,
       type,
-      componentId,
       page = 1,
       limit = 10,
       sort = "createdAt",
       order = "desc",
+      status,
     } = req.query;
 
     // Create filter object
     let filter = {};
-    if (name) filter.name = new RegExp(name, "i"); // Case-insensitive search
+
     if (type) filter.type = type;
-    if (componentId) filter.componentId = componentId;
+
+    if (status !== undefined) filter.status = status;
 
     // Pagination
     const pageNumber = parseInt(page, 10);
@@ -86,7 +88,8 @@ exports.getAllComponents = async (req, res) => {
     const sortQuery = { [sort]: sortOrder };
 
     // Fetch components with filters, pagination, and sorting
-    const components = await components.find(filter)
+    const allComponents = await components
+      .find(filter)
       .sort(sortQuery)
       .skip(skip)
       .limit(pageSize);
@@ -96,23 +99,136 @@ exports.getAllComponents = async (req, res) => {
 
     res.status(200).json({
       success: true,
-      data: components,
+      data: allComponents,
       pagination: {
-        total: totalComponents,
-        page: pageNumber,
+        totalCount: totalComponents,
+        currentPage: pageNumber,
         limit: pageSize,
         totalPages: Math.ceil(totalComponents / pageSize),
       },
     });
   } catch (error) {
+    console.error("Error getting Component details:", error);
     res.status(500).json({ success: false, message: error.message });
   }
 };
 
 exports.getComponentDropdown = async (req, res) => {
- try {
-    
- } catch (error) {
-    
- }   
-}
+  try {
+    const { name } = req.query;
+
+    const fuzzyRegex = new RegExp(name.split("").join(".*"), "i");
+
+    const items = await components.aggregate([
+      {
+        $match: {
+          name: fuzzyRegex,
+        },
+      },
+      {
+        $limit: 30,
+      },
+    ]);
+    res.status(200).json(items);
+  } catch (error) {
+    console.error("Error getting Component dropdown:", error);
+    res.status(500).json({ success: false, message: error.message });
+  }
+};
+
+exports.getSingleComponent = async (req, res) => {
+  try {
+    const { id } = req.params;
+    const component = await components.findOne({
+      $or: [
+        { _id: mongoose.Types.ObjectId.isValid(id) ? id : null },
+        { componentId: id },
+      ],
+    });
+    if (!component) {
+      return res
+        .status(404)
+        .json({ success: false, message: "Component not found." });
+    }
+    res.status(200).json(component);
+  } catch (error) {
+    console.error("Error getting Component details:", error);
+    res.status(500).json({ success: false, message: error.message });
+  }
+};
+
+exports.updateComponent = async (req, res) => {
+  try {
+    const { id } = req.params;
+    const { name, status } = req.body;
+    const component_image = req.files?.component_image;
+
+    const component = await components.findOne({
+      $or: [
+        { _id: mongoose.Types.ObjectId.isValid(id) ? id : null },
+        { componentId: id },
+      ],
+    });
+
+    if (!component) {
+      return res
+        .status(404)
+        .json({ success: false, message: "Component not found." });
+    }
+
+    let fileUploadResult = null;
+
+    if (component_image) {
+      await deleteFile(component.component_image.public_id);
+      fileUploadResult = await uploadFile(
+        component_image.tempFilePath,
+        component_image.mimetype
+      );
+    }
+
+    component.name = name || component.name;
+    component.component_image = fileUploadResult
+      ? {
+          secure_url: fileUploadResult.secure_url,
+          public_id: fileUploadResult.public_id,
+        }
+      : component.component_image;
+    component.status = status !== undefined ? status : component.status;
+
+    const updatedComponent = await component.save();
+    return res.status(200).json({
+      ...updatedComponent._doc,
+    });
+  } catch (error) {
+    console.error("Error updating Component dropdown:", error);
+    res.status(500).json({ success: false, message: error.message });
+  }
+};
+
+exports.deleteComponent = async (req, res) => {
+  try {
+    const { id } = req.params;
+    const component = await components.findOne({
+      $or: [
+        { _id: mongoose.Types.ObjectId.isValid(id) ? id : null },
+        { componentId: id },
+      ],
+    });
+
+    if (!component) {
+      return res
+        .status(404)
+        .json({ success: false, message: "Component not found." });
+    }
+
+    await deleteFile(component.component_image.public_id);
+    await components.deleteOne({ _id: component._id });
+
+    res
+      .status(200)
+      .json({ success: true, message: "Component deleted successfully" });
+  } catch (error) {
+    console.error("Error deleting Component:", error);
+    res.status(500).json({ success: false, message: error.message });
+  }
+};
