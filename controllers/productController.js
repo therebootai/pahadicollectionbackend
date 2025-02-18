@@ -20,6 +20,7 @@ exports.createProduct = async (req, res) => {
       description,
       variant,
       specification,
+      thumbnailIndex,
     } = req.body;
 
     let { productImage, hoverImage } = req.files;
@@ -75,6 +76,10 @@ exports.createProduct = async (req, res) => {
       });
     }
 
+    const index = parseInt(thumbnailIndex, 10) || 0;
+
+    const thumbnail_image = productImages[index];
+
     const productId = await generateCustomId(
       productModel,
       "productId",
@@ -103,6 +108,7 @@ exports.createProduct = async (req, res) => {
         public_id: hoverImageResult.public_id,
       },
       isActive: true, // Default to active
+      thumbnail_image,
     });
 
     const savedProduct = await newProduct.save();
@@ -161,16 +167,17 @@ exports.getAllProducts = async (req, res) => {
     // Sorting setup
     const sortOrder = order === "asc" ? 1 : -1;
 
-    const products = await productModel
-      .find(query)
-      .skip(skip)
-      .limit(parseInt(limit))
-      .sort({ [sortBy]: sortOrder })
-      .populate("category")
-      .populate("pickup")
-      .populate("variant.variable");
-
-    const totalProducts = await productModel.countDocuments(query);
+    const [products, totalProducts] = await Promise.all([
+      productModel
+        .find(query)
+        .skip(skip)
+        .limit(parseInt(limit))
+        .sort({ [sortBy]: sortOrder })
+        .populate("category")
+        .populate("pickup")
+        .populate("variant.variable"),
+      productModel.countDocuments(query),
+    ]);
 
     // Send the response with pagination details
     res.status(200).json({
@@ -202,12 +209,13 @@ exports.deleteProductById = async (req, res) => {
     if (!deletedProduct) {
       return res.status(404).json({ message: "Product not found" });
     }
-    await deleteFile(deletedProduct.hoverImage.public_id);
-    deletedProduct.productImage.map(async (item) => {
-      await deleteFile(item.public_id);
-    });
-
-    await productModel.findByIdAndDelete(deletedProduct._id);
+    await Promise.all([
+      deleteFile(deletedProduct.hoverImage.public_id),
+      deletedProduct.productImage.map((item) => {
+        deleteFile(item.public_id);
+      }),
+      productModel.findByIdAndDelete(deletedProduct._id),
+    ]);
     res.status(200).json({ message: "Product Data Delete Successfully" });
   } catch (error) {
     console.error("Error deleting Product details:", error);
@@ -237,6 +245,7 @@ exports.updateProductById = async (req, res) => {
       variant,
       specification,
       isActive,
+      thumbnailIndex,
     } = req.body;
 
     let productImage = null;
@@ -403,6 +412,9 @@ exports.updateProductById = async (req, res) => {
       : updatedProduct.specification;
     updatedProduct.isActive =
       isActive !== undefined ? isActive : updatedProduct.isActive;
+    updatedProduct.thumbnail_image = parseInt(thumbnailIndex)
+      ? updatedProduct.productImage[parseInt(thumbnailIndex)]
+      : updatedProduct.thumbnail_image;
 
     const product = await updatedProduct.save();
 
@@ -459,18 +471,19 @@ exports.searchProduct = async (req, res) => {
       ],
     };
 
-    const totalProducts = await productModel.countDocuments(query);
+    const [products, totalProducts] = await Promise.all([
+      productModel
+        .find(query)
+        .sort({ createdAt: -1 })
+        .skip((currentPage - 1) * currentLimit)
+        .limit(currentLimit)
+        .populate("category")
+        .populate("pickup")
+        .populate("variant"),
+      productModel.countDocuments(query),
+    ]);
+
     const totalPages = Math.ceil(totalProducts / currentLimit);
-
-    const products = await productModel
-      .find(query)
-      .sort({ createdAt: -1 })
-      .skip((currentPage - 1) * currentLimit)
-      .limit(currentLimit)
-      .populate("category")
-      .populate("pickup")
-      .populate("variant");
-
     res.status(200).json({
       message: "Products fetched successfully",
       data: products,

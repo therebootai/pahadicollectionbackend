@@ -78,10 +78,10 @@ exports.getVariables = async (req, res) => {
 
     const skip = (pageNumber - 1) * pageLimit;
 
-    const totalCount = await Variables.countDocuments(filter);
-    const variableData = await Variables.find(filter)
-      .skip(skip)
-      .limit(pageLimit);
+    const [totalCount, variableData] = await Promise.all([
+      Variables.countDocuments(filter),
+      Variables.find(filter).skip(skip).limit(pageLimit),
+    ]);
 
     res.status(200).json({
       message: "Variable Fetch Successfully",

@@ -3,6 +3,7 @@ const mongoose = require("mongoose");
 const orderModel = require("../models/orderModel");
 const paymentModel = require("../models/paymentModel");
 const generateCustomId = require("../middlewares/ganerateCustomId");
+const customerModel = require("../models/customerModel");
 
 exports.createNewOrder = async (req, res) => {
   try {
@@ -46,11 +47,20 @@ exports.createNewOrder = async (req, res) => {
 
     const savedPayment = await newPayment.save();
 
-    const updatedOrder = await orderModel.findByIdAndUpdate(
-      savedOrder._id,
-      { paymentId: savedPayment._id },
-      { new: true }
-    );
+    const [customerUpdate, updatedOrder] = await Promise.all([
+      customerModel.findByIdAndUpdate(
+        customerId,
+        {
+          $push: { orders: savedOrder._id, payments: savedPayment._id },
+        },
+        { new: true }
+      ),
+      orderModel.findByIdAndUpdate(
+        savedOrder._id,
+        { paymentId: savedPayment._id },
+        { new: true }
+      ),
+    ]);
 
     res.status(200).json({
       message: "Order created successfully",

@@ -112,7 +112,8 @@ exports.getAllCustomers = async (req, res) => {
       .populate("cart")
       .populate("orders")
       .populate("wishlist")
-      .populate("payments");
+      .populate("payments")
+      .populate("used_coupon");
 
     const totalCustomers = await customerModel.countDocuments(query);
 
@@ -162,7 +163,8 @@ exports.searchCustomers = async (req, res) => {
       .populate("cart")
       .populate("orders")
       .populate("wishlist")
-      .populate("payments");
+      .populate("payments")
+      .populate("used_coupon");
 
     const totalCustomers = await customerModel.countDocuments(query);
 
@@ -197,7 +199,8 @@ exports.getCustomerById = async (req, res) => {
       .populate("cart")
       .populate("orders")
       .populate("wishlist")
-      .populate("payments");
+      .populate("payments")
+      .populate("used_coupon");
 
     if (!customer) {
       return res.status(404).json({ message: "Customer not found" });
@@ -474,3 +477,5 @@ exports.logoutCustomer = async (req, res) => {
     res.status(500).json({ message: "Internal Server Error" });
   }
 };
+
+
