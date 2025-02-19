@@ -84,6 +84,10 @@ const productSchema = new mongoose.Schema(
       secure_url: { type: String, required: true },
       public_id: { type: String, required: true },
     },
+    thumbnail_image: {
+      secure_url: { type: String, required: true },
+      public_id: { type: String, required: true },
+    },
   },
   {
     timestamps: true,

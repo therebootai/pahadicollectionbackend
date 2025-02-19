@@ -64,6 +64,18 @@ const customerSchema = new mongoose.Schema(
         default: [],
       },
     ],
+    is_disabled: {
+      type: Boolean,
+      required: true,
+      default: false,
+    },
+    used_coupon: [
+      {
+        type: mongoose.Schema.Types.ObjectId,
+        ref: "Coupons",
+        default: [],
+      },
+    ],
   },
   {
     timestamps: true,

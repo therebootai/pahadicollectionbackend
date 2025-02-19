@@ -3,6 +3,7 @@ const mongoose = require("mongoose");
 const orderModel = require("../models/orderModel");
 const paymentModel = require("../models/paymentModel");
 const generateCustomId = require("../middlewares/ganerateCustomId");
+const customerModel = require("../models/customerModel");
 
 exports.createNewOrder = async (req, res) => {
   try {
@@ -46,11 +47,20 @@ exports.createNewOrder = async (req, res) => {
 
     const savedPayment = await newPayment.save();
 
-    const updatedOrder = await orderModel.findByIdAndUpdate(
-      savedOrder._id,
-      { paymentId: savedPayment._id },
-      { new: true }
-    );
+    const [customerUpdate, updatedOrder] = await Promise.all([
+      customerModel.findByIdAndUpdate(
+        customerId,
+        {
+          $push: { orders: savedOrder._id, payments: savedPayment._id },
+        },
+        { new: true }
+      ),
+      orderModel.findByIdAndUpdate(
+        savedOrder._id,
+        { paymentId: savedPayment._id },
+        { new: true }
+      ),
+    ]);
 
     res.status(200).json({
       message: "Order created successfully",
@@ -190,6 +200,40 @@ exports.deleteOrder = async (req, res) => {
       .json({ success: true, message: "Order Data Delete Successfully" });
   } catch (error) {
     console.log("Error deleting order:", error);
+    res.status(500).json({ message: "Internal Server Error", error: error });
+  }
+};
+
+exports.updateOrderDetails = async (req, res) => {
+  try {
+    const { id } = req.params;
+    const { products, status, delivery_location } = req.body;
+    const updatedOrder = await orderModel.findOneAndUpdate(
+      {
+        $or: [
+          { _id: mongoose.Types.ObjectId.isValid(id) ? id : null },
+          { couponId: id },
+        ],
+      },
+      {
+        $set: {
+          ...(products && { products }),
+          ...(status && { status }),
+          ...(delivery_location && { delivery_location }),
+        },
+      },
+      { new: true, runValidators: true }
+    );
+
+    if (!updatedOrder) {
+      return res.status(404).json({ message: "Order not found" });
+    }
+    res.status(200).json({
+      message: "Order details updated successfully",
+      order: updatedOrder,
+    });
+  } catch (error) {
+    console.log("Error updating order details:", error);
     res.status(500).json({ message: "Internal Server Error", error: error });
   }
 };

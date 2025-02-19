@@ -45,6 +45,7 @@ const orderSchema = new mongoose.Schema(
         "canceled",
         "refund_generated",
         "refunded",
+        "canceled",
       ],
       default: "ordered",
     },
