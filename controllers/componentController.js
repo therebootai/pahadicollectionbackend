@@ -15,18 +15,12 @@ exports.createComponent = async (req, res) => {
       });
     }
 
-    const componentId = await generateCustomId(
-      components,
-      "componentId",
-      "componentId"
-    );
-
     let uploadedFile = component_image;
 
-    const fileUploadResult = await uploadFile(
-      uploadedFile.tempFilePath,
-      uploadedFile.mimetype
-    );
+    const [fileUploadResult, componentId] = await Promise.all([
+      uploadFile(uploadedFile.tempFilePath, uploadedFile.mimetype),
+      generateCustomId(components, "componentId", "componentId"),
+    ]);
 
     if (!fileUploadResult.secure_url || !fileUploadResult.public_id) {
       return res

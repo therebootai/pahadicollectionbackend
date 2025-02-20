@@ -28,7 +28,7 @@ const couponRouter = require("./router/couponRoute");
 const orderRouter = require("./router/orderRoute");
 const userRoute = require("./router/userRoute");
 
-app.use(cors());
+app.use(cors({ origin: process.env.ORIGIN_URL, credentials: true }));
 app.use(cookieParser());
 app.use(express.json());
 app.use(fileUpload({ useTempFiles: true, tempFileDir: tempFilePath }));

@@ -139,6 +139,7 @@ exports.getAllProducts = async (req, res) => {
       priceMax, // filter by max price
       category, // filter by category
       in_stock, // filter by stock
+      tags,
     } = req.query;
 
     let query = {};
@@ -159,6 +160,10 @@ exports.getAllProducts = async (req, res) => {
 
     if (category) {
       query.category = { $in: category.split(",") }; // Allow multiple categories, comma-separated
+    }
+
+    if (tags) {
+      query.tags = { $in: tags.split(",") }; // Allow multiple tags, comma-separated
     }
 
     // Pagination setup

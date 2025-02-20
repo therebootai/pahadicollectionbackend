@@ -10,18 +10,11 @@ cloudinary.config({
 exports.uploadFile = async (tempFilePath, fileType) => {
   try {
     let folderName = "images";
-    let format = "jpg";
     let resourceType = "image";
-    if (fileType === "application/pdf") {
-      folderName = "pdf";
-      format = "pdf";
-      resourceType = "raw";
-    }
 
     const result = await cloudinary.uploader.upload(tempFilePath, {
       folder: "pahadicollection/" + folderName,
       resource_type: resourceType,
-      format: format,
     });
 
     return result;

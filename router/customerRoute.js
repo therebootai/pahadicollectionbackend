@@ -13,6 +13,7 @@ const {
   removeFromCart,
   loginCustomer,
   logoutCustomer,
+  updateCustomerById,
 } = require("../controllers/customerControler");
 const customerRouter = express.Router();
 
@@ -38,6 +39,10 @@ customerRouter.post("/login", loginCustomer);
 
 customerRouter.get("/logout", logoutCustomer);
 
-customerRouter.route("/:id").get(getCustomerById).delete(deleteCustomerById);
+customerRouter
+  .route("/:id")
+  .get(getCustomerById)
+  .delete(deleteCustomerById)
+  .put(updateCustomerById);
 
 module.exports = customerRouter;
