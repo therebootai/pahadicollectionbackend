@@ -88,6 +88,23 @@ const productSchema = new mongoose.Schema(
       secure_url: { type: String, required: true },
       public_id: { type: String, required: true },
     },
+    product_viewed: {
+      type: Number,
+      default: 0,
+    },
+    product_added: {
+      type: Number,
+      default: 0,
+    },
+    product_ordered: {
+      type: Number,
+      default: 0,
+    },
+    tags: {
+      type: [String],
+      default: [],
+      enum: ["best_selling", "mostly_viewed", "mostly_added", "editor_choice"],
+    },
   },
   {
     timestamps: true,

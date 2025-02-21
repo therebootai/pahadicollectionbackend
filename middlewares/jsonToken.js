@@ -31,6 +31,6 @@ exports.authenticateUser = (req, res, next) => {
       .json({ error: "Unauthorized: Invalid or expired token" });
   }
 
-  req.user = decoded; // Attach user data to request
+  req.user = decoded._doc; // Attach user data to request
   next(); // Move to the next middleware or route handler
 };

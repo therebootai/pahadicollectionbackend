@@ -243,6 +243,116 @@ exports.deleteCustomerById = async (req, res) => {
   }
 };
 
+exports.updateCustomerById = async (req, res) => {
+  try {
+    const { id } = req.params;
+    const {
+      name,
+      email,
+      mobile,
+      address,
+      password,
+      cart,
+      wishlist,
+      used_coupon,
+      isLogin,
+      is_disabled,
+    } = req.body;
+
+    const customer = await customerModel.findOne({
+      $or: [
+        { _id: mongoose.Types.ObjectId.isValid(id) ? id : null },
+        { customerId: id },
+      ],
+    });
+
+    if (!customer) {
+      return res.status(404).json({ message: "Customer not found." });
+    }
+
+    if (email && email !== customer.email) {
+      const emailExists = await customerModel.findOne({ email });
+      if (emailExists) {
+        return res.status(400).json({ message: "Email is already in use." });
+      }
+      customer.email = email;
+    }
+
+    if (mobile && mobile !== customer.mobile) {
+      const mobileExists = await customerModel.findOne({ mobile });
+      if (mobileExists) {
+        return res
+          .status(400)
+          .json({ message: "Mobile number is already in use." });
+      }
+      customer.mobile = mobile;
+    }
+
+    // Update other fields if provided
+    if (name) customer.name = name;
+    if (address) customer.address = address;
+    if (typeof isLogin === "boolean") customer.isLogin = isLogin;
+    if (typeof is_disabled === "boolean") customer.is_disabled = is_disabled;
+
+    // Update password (Triggers pre-save hook for hashing)
+    if (password) {
+      customer.password = password; // Will be hashed by pre("save") middleware
+    }
+
+    // Update arrays while avoiding duplicates
+    if (cart) {
+      customer.cart = [...new Set([...customer.cart, ...cart])];
+    }
+    if (wishlist) {
+      customer.wishlist = [...new Set([...customer.wishlist, ...wishlist])];
+    }
+
+    if (used_coupon) {
+      customer.used_coupon = [
+        ...new Set([...customer.used_coupon, ...used_coupon]),
+      ];
+    }
+
+    // Handle profile image update
+    if (req.files && req.files.profileImage) {
+      const profileImage = req.files.profileImage[0];
+
+      // Upload new image to Cloudinary
+      const profileImageResult = await uploadFile(
+        profileImage.tempFilePath,
+        profileImage.mimeType
+      );
+
+      if (profileImageResult.error) {
+        return res
+          .status(500)
+          .json({ message: "Error uploading profile image." });
+      }
+
+      // If the customer has an existing profile image, remove the old one from Cloudinary
+      if (customer.profileImage?.public_id) {
+        await deleteFile(customer.profileImage.public_id);
+      }
+
+      customer.profileImage = {
+        secure_url: profileImageResult.secure_url,
+        public_id: profileImageResult.public_id,
+      };
+    }
+
+    // Save customer to trigger pre-save hook for password hashing
+    await customer.save();
+
+    return res.status(200).json({
+      message: "Customer updated successfully.",
+      customer,
+    });
+  } catch (error) {
+    console.log("Error updateing customer:", error);
+    res.status(500).json({ message: "Internal Server Error", error: error });
+  }
+};
+
 exports.getAllWishlist = async (req, res) => {
   try {
     const { minPrice, maxPrice, category, name } = req.query;
@@ -339,6 +449,7 @@ exports.removeFromWishlist = async (req, res) => {
     res.status(500).json({ message: "Server error", error: error.message });
   }
 };
+
 exports.getAllCart = async (req, res) => {
   try {
     const { minPrice, maxPrice, category, name } = req.query;
@@ -477,5 +588,3 @@ exports.logoutCustomer = async (req, res) => {
     res.status(500).json({ message: "Internal Server Error" });
   }
 };
-
-
