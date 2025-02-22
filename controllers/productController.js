@@ -13,12 +13,13 @@ exports.createProduct = async (req, res) => {
       pickup,
       productType,
       price,
+      main_product,
+      variable,
       mrp,
       in_stock,
       attribute,
       discount,
       description,
-      variant,
       specification,
       thumbnailIndex,
     } = req.body;
@@ -43,15 +44,6 @@ exports.createProduct = async (req, res) => {
       hoverImage = hoverImage[0]; // Take the first file if multiple are sent
     }
 
-    const hoverImageResult = await uploadFile(
-      hoverImage.tempFilePath,
-      hoverImage.mimetype
-    );
-
-    if (hoverImageResult.error) {
-      return res.status(500).json({ message: "Error uploading hover image." });
-    }
-
     let productImages = [];
 
     // Ensure `productImage` is an array (multiple files)
@@ -59,32 +51,38 @@ exports.createProduct = async (req, res) => {
       productImage = [productImage]; // Convert single file into an array
     }
 
-    for (let i = 0; i < productImage.length; i++) {
-      const productImageResult = await uploadFile(
-        productImage[i].tempFilePath,
-        productImage[i].mimetype
-      );
-      if (productImageResult.error) {
-        return res
-          .status(500)
-          .json({ message: `Error uploading image ${i + 1}.` });
-      }
+    async function savedProductImages() {
+      for (let i = 0; i < productImage.length; i++) {
+        const productImageResult = await uploadFile(
+          productImage[i].tempFilePath,
+          productImage[i].mimetype
+        );
+        if (productImageResult.error) {
+          return res
+            .status(500)
+            .json({ message: `Error uploading image ${i + 1}.` });
+        }
 
-      productImages.push({
-        secure_url: productImageResult.secure_url,
-        public_id: productImageResult.public_id,
-      });
+        productImages.push({
+          secure_url: productImageResult.secure_url,
+          public_id: productImageResult.public_id,
+        });
+      }
+    }
+
+    const [hoverImageResult, productId] = await Promise.all([
+      uploadFile(hoverImage.tempFilePath, hoverImage.mimetype),
+      generateCustomId(productModel, "productId", "productId"),
+      savedProductImages(),
+    ]);
+
+    if (hoverImageResult.error) {
+      return res.status(500).json({ message: "Error uploading hover image." });
     }
 
     const index = parseInt(thumbnailIndex, 10) || 0;
 
     const thumbnail_image = productImages[index];
-
-    const productId = await generateCustomId(
-      productModel,
-      "productId",
-      "productId"
-    );
 
     const newProduct = new productModel({
       productId,
@@ -94,13 +92,15 @@ exports.createProduct = async (req, res) => {
       subSubCategory,
       pickup,
       productType,
+      main_product: productType === "variant" ? main_product : null,
+      variable: productType === "variant" ? JSON.parse(variable) : null,
       price,
       mrp,
       in_stock,
       attribute,
       discount,
       description,
-      variant: variant ? JSON.parse(variant) : [],
+      variant: [],
       specification: specification ? JSON.parse(specification) : [], // Convert JSON string to object
       productImage: productImages, // Store multiple product images
       hoverImage: {
@@ -112,6 +112,10 @@ exports.createProduct = async (req, res) => {
     });
 
     const savedProduct = await newProduct.save();
+
+    await productModel.findByIdAndUpdate(main_product, {
+      $push: { variant: savedProduct._id },
+    });
 
     // Respond with the created product
     return res.status(201).json({
@@ -180,7 +184,9 @@ exports.getAllProducts = async (req, res) => {
         .sort({ [sortBy]: sortOrder })
         .populate("category")
         .populate("pickup")
-        .populate("variant.variable"),
+        .populate("main_product")
+        .populate("variant")
+        .populate("variable.variableId"),
       productModel.countDocuments(query),
     ]);
 
@@ -241,6 +247,8 @@ exports.updateProductById = async (req, res) => {
       subSubCategory,
       pickup,
       productType,
+      main_product,
+      variable,
       price,
       mrp,
       in_stock,
@@ -250,6 +258,7 @@ exports.updateProductById = async (req, res) => {
       variant,
       specification,
       isActive,
+      tags,
       thumbnailIndex,
     } = req.body;
 
@@ -282,7 +291,7 @@ exports.updateProductById = async (req, res) => {
         hoverImage.tempFilePath,
         hoverImage.mimetype
       );
-      updateData.hoverImage = {
+      updatedProduct.hoverImage = {
         secure_url: hoverResult.secure_url,
         public_id: hoverResult.public_id,
       };
@@ -403,6 +412,9 @@ exports.updateProductById = async (req, res) => {
       subSubCategory || updatedProduct.subSubCategory;
     updatedProduct.pickup = pickup || updatedProduct.pickup;
     updatedProduct.productType = productType || updatedProduct.productType;
+    updatedProduct.main_product =
+      productType === "variant" ? main_product : null;
+    updatedProduct.variable = productType === "variant" ? variable : null;
     updatedProduct.price = price || updatedProduct.price;
     updatedProduct.mrp = mrp || updatedProduct.mrp;
     updatedProduct.in_stock = in_stock || updatedProduct.in_stock;
@@ -417,6 +429,7 @@ exports.updateProductById = async (req, res) => {
       : updatedProduct.specification;
     updatedProduct.isActive =
       isActive !== undefined ? isActive : updatedProduct.isActive;
+    updatedProduct.tags = tags ? JSON.parse(tags) : updatedProduct.tags;
     updatedProduct.thumbnail_image = parseInt(thumbnailIndex)
       ? updatedProduct.productImage[parseInt(thumbnailIndex)]
       : updatedProduct.thumbnail_image;
@@ -447,7 +460,9 @@ exports.getProductById = async (req, res) => {
       })
       .populate("category")
       .populate("pickup")
-      .populate("variant.variable");
+      .populate("main_product")
+      .populate("variant")
+      .populate("variable.variableId");
     if (!product) {
       return res.status(404).json({ message: "Product not found" });
     }
@@ -465,7 +480,7 @@ exports.getProductById = async (req, res) => {
 
 exports.searchProduct = async (req, res) => {
   try {
-    const { search = "", page = 1, limit = 10 } = req.query;
+    const { search = "", page = 1, limit = 10, productType } = req.query;
     currentPage = parseInt(page);
     currentLimit = parseInt(limit);
 
@@ -476,6 +491,10 @@ exports.searchProduct = async (req, res) => {
       ],
     };
 
+    if (productType) {
+      query.productType = productType;
+    }
+
     const [products, totalProducts] = await Promise.all([
       productModel
         .find(query)
@@ -484,7 +503,9 @@ exports.searchProduct = async (req, res) => {
         .limit(currentLimit)
         .populate("category")
         .populate("pickup")
-        .populate("variant"),
+        .populate("main_product")
+        .populate("variant")
+        .populate("variable.variableId"),
       productModel.countDocuments(query),
     ]);
 

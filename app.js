@@ -27,6 +27,7 @@ const customerRouter = require("./router/customerRoute");
 const couponRouter = require("./router/couponRoute");
 const orderRouter = require("./router/orderRoute");
 const userRoute = require("./router/userRoute");
+const paymentRouter = require("./router/paymentRoute");
 
 app.use(cors({ origin: process.env.ORIGIN_URL, credentials: true }));
 app.use(cookieParser());
@@ -50,7 +51,16 @@ app.use("/api/customers", customerRouter);
 app.use("/api/coupons", couponRouter);
 
 app.use("/api/orders", orderRouter);
+
 app.use("/api/users", userRoute);
+
+app.use("/api/payments", paymentRouter);
+
+app.get("/", (req, res) => {
+  res.send(
+    "Hello World! From Pahadi Collection developer by Reboot AI PVT. LTD"
+  );
+});
 
 app.listen(port, () => {
   console.log(`Port starts on  ${port}`);

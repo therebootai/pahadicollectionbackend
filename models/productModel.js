@@ -34,6 +34,13 @@ const productSchema = new mongoose.Schema(
       required: true,
       enum: ["single", "variant"],
     },
+    main_product: {
+      type: mongoose.Schema.Types.ObjectId,
+      ref: "Products",
+      required: function () {
+        return this.productType === "variant";
+      },
+    },
     price: {
       type: Number,
       required: true,
@@ -55,15 +62,25 @@ const productSchema = new mongoose.Schema(
     description: {
       type: String,
     },
+    variable: {
+      variableId: {
+        type: mongoose.Schema.Types.ObjectId,
+        ref: "Variables",
+        required: function () {
+          return this.productType === "variant";
+        },
+      },
+      variableValue: {
+        type: String,
+        required: function () {
+          return this.productType === "variant";
+        },
+      },
+    },
     variant: [
       {
-        variable: {
-          type: mongoose.Schema.Types.ObjectId,
-          ref: "Variables",
-        },
-        additional: {
-          type: Object,
-        },
+        type: mongoose.Schema.Types.ObjectId,
+        ref: "Products",
         default: [],
       },
     ],
