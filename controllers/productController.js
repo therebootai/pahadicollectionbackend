@@ -2,6 +2,7 @@ const mongoose = require("mongoose");
 const { uploadFile, deleteFile } = require("../middlewares/cloudinary");
 const generateCustomId = require("../middlewares/ganerateCustomId");
 const productModel = require("../models/productModel");
+const attributeModel = require("../models/attributeModel");
 
 exports.createProduct = async (req, res) => {
   try {
@@ -97,7 +98,7 @@ exports.createProduct = async (req, res) => {
       price,
       mrp,
       in_stock,
-      attribute,
+      attribute: attribute ? JSON.parse(attribute) : [],
       discount,
       description,
       variant: [],
@@ -116,6 +117,14 @@ exports.createProduct = async (req, res) => {
     await productModel.findByIdAndUpdate(main_product, {
       $push: { variant: savedProduct._id },
     });
+
+    if (attribute) {
+      const attributeIds = JSON.parse(attribute);
+      await attributeModel.updateMany(
+        { _id: { $in: attributeIds } },
+        { $push: { products: savedProduct._id } }
+      );
+    }
 
     // Respond with the created product
     return res.status(201).json({
@@ -186,7 +195,9 @@ exports.getAllProducts = async (req, res) => {
         .populate("pickup")
         .populate("main_product")
         .populate("variant")
-        .populate("variable.variableId"),
+        .populate("variable.variableId")
+        .populate("attribute")
+        .populate("reviews"),
       productModel.countDocuments(query),
     ]);
 
@@ -261,12 +272,6 @@ exports.updateProductById = async (req, res) => {
       tags,
       thumbnailIndex,
     } = req.body;
-
-    let productImage = null;
-
-    if (req.files) {
-      productImage = req.files.productImage;
-    }
 
     const updatedProduct = await productModel.findOne({
       $or: [
@@ -405,6 +410,28 @@ exports.updateProductById = async (req, res) => {
       }
     }
 
+    if (attribute) {
+      const newAttributeIds = JSON.parse(attribute);
+      const oldAttributeIds = updatedProduct.attribute || [];
+
+      // Remove product from old attributes
+
+      await Promise.all([
+        await attributeModel.updateMany(
+          { _id: { $in: oldAttributeIds } },
+          { $pull: { products: updatedProduct._id } }
+        ),
+
+        await attributeModel.updateMany(
+          { _id: { $in: newAttributeIds } },
+          { $addToSet: { products: updatedProduct._id } } // Ensures no duplicates
+        ),
+      ]);
+      updatedProduct.attribute = attribute
+        ? JSON.parse(attribute)
+        : updatedProduct.attribute;
+    }
+
     updatedProduct.title = title || updatedProduct.title;
     updatedProduct.category = category || updatedProduct.category;
     updatedProduct.subCategory = subCategory || updatedProduct.subCategory;
@@ -418,7 +445,6 @@ exports.updateProductById = async (req, res) => {
     updatedProduct.price = price || updatedProduct.price;
     updatedProduct.mrp = mrp || updatedProduct.mrp;
     updatedProduct.in_stock = in_stock || updatedProduct.in_stock;
-    updatedProduct.attribute = attribute || updatedProduct.attribute;
     updatedProduct.discount = discount || updatedProduct.discount;
     updatedProduct.description = description || updatedProduct.description;
     updatedProduct.variant = variant
@@ -462,7 +488,9 @@ exports.getProductById = async (req, res) => {
       .populate("pickup")
       .populate("main_product")
       .populate("variant")
-      .populate("variable.variableId");
+      .populate("variable.variableId")
+      .populate("attribute")
+      .populate("reviews");
     if (!product) {
       return res.status(404).json({ message: "Product not found" });
     }
@@ -505,7 +533,9 @@ exports.searchProduct = async (req, res) => {
         .populate("pickup")
         .populate("main_product")
         .populate("variant")
-        .populate("variable.variableId"),
+        .populate("variable.variableId")
+        .populate("attribute")
+        .populate("reviews"),
       productModel.countDocuments(query),
     ]);
 

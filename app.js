@@ -28,6 +28,8 @@ const couponRouter = require("./router/couponRoute");
 const orderRouter = require("./router/orderRoute");
 const userRoute = require("./router/userRoute");
 const paymentRouter = require("./router/paymentRoute");
+const attributeRouter = require("./router/attributeRoute");
+const reviewRouter = require("./router/reviewRoute");
 
 app.use(cors({ origin: process.env.ORIGIN_URL, credentials: true }));
 app.use(cookieParser());
@@ -55,6 +57,10 @@ app.use("/api/orders", orderRouter);
 app.use("/api/users", userRoute);
 
 app.use("/api/payments", paymentRouter);
+
+app.use("/api/attributes", attributeRouter);
+
+app.use("/api/reviews", reviewRouter);
 
 app.get("/", (req, res) => {
   res.send(

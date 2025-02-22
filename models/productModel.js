@@ -1,4 +1,5 @@
 const mongoose = require("mongoose");
+const slugify = require("slugify");
 
 const productSchema = new mongoose.Schema(
   {
@@ -53,9 +54,13 @@ const productSchema = new mongoose.Schema(
       type: Number,
       required: true,
     },
-    attribute: {
-      type: String,
-    },
+    attribute: [
+      {
+        type: mongoose.Schema.Types.ObjectId,
+        ref: "Attributes",
+        default: [],
+      },
+    ],
     discount: {
       type: Number,
     },
@@ -122,11 +127,30 @@ const productSchema = new mongoose.Schema(
       default: [],
       enum: ["best_selling", "mostly_viewed", "mostly_added", "editor_choice"],
     },
+    reviews: [
+      {
+        type: mongoose.Schema.Types.ObjectId,
+        ref: "Reviews",
+        default: [],
+      },
+    ],
+    slug: {
+      type: String,
+      required: true,
+      unique: true,
+    },
   },
   {
     timestamps: true,
   }
 );
+
+productSchema.pre("validate", async function (next) {
+  if (this.isModified("title") || this.isNew) {
+    this.slug = slugify(this.title, { lower: true, strict: true });
+  }
+  next();
+});
 
 productSchema.index({ createdAt: -1, isActive: 1 });
 
