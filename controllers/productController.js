@@ -23,6 +23,7 @@ exports.createProduct = async (req, res) => {
       description,
       specification,
       thumbnailIndex,
+      tags,
     } = req.body;
 
     let { productImage, hoverImage } = req.files;
@@ -110,6 +111,7 @@ exports.createProduct = async (req, res) => {
       },
       isActive: true, // Default to active
       thumbnail_image,
+      tags: tags ? JSON.parse(tags) : [],
     });
 
     const savedProduct = await newProduct.save();
@@ -441,7 +443,8 @@ exports.updateProductById = async (req, res) => {
     updatedProduct.productType = productType || updatedProduct.productType;
     updatedProduct.main_product =
       productType === "variant" ? main_product : null;
-    updatedProduct.variable = productType === "variant" ? variable : null;
+    updatedProduct.variable =
+      productType === "variant" ? JSON.parse(variable) : null;
     updatedProduct.price = price || updatedProduct.price;
     updatedProduct.mrp = mrp || updatedProduct.mrp;
     updatedProduct.in_stock = in_stock || updatedProduct.in_stock;
