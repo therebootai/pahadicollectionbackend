@@ -355,11 +355,33 @@ exports.updateCustomerById = async (req, res) => {
 
 exports.getAllWishlist = async (req, res) => {
   try {
-    const { minPrice, maxPrice, category, name } = req.query;
+    const {
+      minPrice,
+      maxPrice,
+      category,
+      name,
+      page = 1,
+      limit = 10,
+      customerId,
+    } = req.query;
+
+    const pageNumber = parseInt(page, 10);
+    const limitNumber = parseInt(limit, 10);
+
+    const query = {};
+
+    if (customerId) {
+      query.$or = [
+        { customerId: customerId },
+        {
+          _id: mongoose.Types.ObjectId.isValid(customerId) ? customerId : null,
+        },
+      ];
+    }
 
     // Find all customers and populate the wishlist
     const customers = await customerModel
-      .find()
+      .find(query)
       .populate({
         path: "wishlist",
         match: {
@@ -376,7 +398,21 @@ exports.getAllWishlist = async (req, res) => {
       .flatMap((customer) => customer.wishlist)
       .filter(Boolean);
 
-    res.status(200).json({ wishlist: allWishlistItems });
+    const totalCount = allWishlistItems.length;
+    const totalPages = Math.ceil(totalCount / limitNumber);
+    const paginatedWishlist = allWishlistItems.slice(
+      (pageNumber - 1) * limitNumber,
+      pageNumber * limitNumber
+    );
+
+    res.status(200).json({
+      wishlist: paginatedWishlist,
+      pagination: {
+        totalCount,
+        currentPage: pageNumber,
+        totalPages: totalPages === 0 ? 1 : totalPages,
+      },
+    });
   } catch (error) {
     console.error("Error getting wishlist details:", error);
     return res.status(500).json({

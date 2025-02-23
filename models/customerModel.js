@@ -76,6 +76,13 @@ const customerSchema = new mongoose.Schema(
         default: [],
       },
     ],
+    reviewed: [
+      {
+        type: mongoose.Schema.Types.ObjectId,
+        ref: "Reviews",
+        default: [],
+      },
+    ],
   },
   {
     timestamps: true,

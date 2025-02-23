@@ -1,4 +1,5 @@
 const mongoose = require("mongoose");
+const slugify = require("slugify");
 
 const productSchema = new mongoose.Schema(
   {
@@ -14,7 +15,9 @@ const productSchema = new mongoose.Schema(
     category: {
       type: mongoose.Schema.Types.ObjectId,
       ref: "Categories",
-      required: true,
+      required: function () {
+        return this.is_drafted;
+      },
     },
 
     subCategory: {
@@ -27,11 +30,15 @@ const productSchema = new mongoose.Schema(
     pickup: {
       type: mongoose.Schema.Types.ObjectId,
       ref: "PickUps",
-      required: true,
+      required: function () {
+        return this.is_drafted;
+      },
     },
     productType: {
       type: String,
-      required: true,
+      required: function () {
+        return this.is_drafted;
+      },
       enum: ["single", "variant"],
     },
     main_product: {
@@ -53,9 +60,13 @@ const productSchema = new mongoose.Schema(
       type: Number,
       required: true,
     },
-    attribute: {
-      type: String,
-    },
+    attribute: [
+      {
+        type: mongoose.Schema.Types.ObjectId,
+        ref: "Attributes",
+        default: [],
+      },
+    ],
     discount: {
       type: Number,
     },
@@ -86,24 +97,70 @@ const productSchema = new mongoose.Schema(
     ],
     specification: [
       {
-        key: { type: String, required: true }, // Specification Key
-        value: { type: String, required: true }, // Specification Value
+        key: {
+          type: String,
+          required: function () {
+            return this.is_drafted;
+          },
+        }, // Specification Key
+        value: {
+          type: String,
+          required: function () {
+            return this.is_drafted;
+          },
+        }, // Specification Value
       },
     ],
-    isActive: { type: Boolean, required: true, default: true },
+    isActive: {
+      type: Boolean,
+      required: true,
+      default: function () {
+        return !this.is_drafted;
+      },
+    },
     productImage: [
       {
-        secure_url: { type: String, required: true },
-        public_id: { type: String, required: true },
+        secure_url: {
+          type: String,
+          required: function () {
+            return this.is_drafted;
+          },
+        },
+        public_id: {
+          type: String,
+          required: function () {
+            return this.is_drafted;
+          },
+        },
       },
     ],
     hoverImage: {
-      secure_url: { type: String, required: true },
-      public_id: { type: String, required: true },
+      secure_url: {
+        type: String,
+        required: function () {
+          return this.is_drafted;
+        },
+      },
+      public_id: {
+        type: String,
+        required: function () {
+          return this.is_drafted;
+        },
+      },
     },
     thumbnail_image: {
-      secure_url: { type: String, required: true },
-      public_id: { type: String, required: true },
+      secure_url: {
+        type: String,
+        required: function () {
+          return this.is_drafted;
+        },
+      },
+      public_id: {
+        type: String,
+        required: function () {
+          return this.is_drafted;
+        },
+      },
     },
     product_viewed: {
       type: Number,
@@ -122,11 +179,35 @@ const productSchema = new mongoose.Schema(
       default: [],
       enum: ["best_selling", "mostly_viewed", "mostly_added", "editor_choice"],
     },
+    reviews: [
+      {
+        type: mongoose.Schema.Types.ObjectId,
+        ref: "Reviews",
+        default: [],
+      },
+    ],
+    slug: {
+      type: String,
+      required: true,
+      unique: true,
+    },
+    is_drafted: {
+      type: Boolean,
+      required: true,
+      default: false,
+    },
   },
   {
     timestamps: true,
   }
 );
+
+productSchema.pre("validate", async function (next) {
+  if (this.isModified("title") || this.isNew) {
+    this.slug = slugify(this.title, { lower: true, strict: true });
+  }
+  next();
+});
 
 productSchema.index({ createdAt: -1, isActive: 1 });
 
