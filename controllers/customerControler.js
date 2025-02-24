@@ -59,7 +59,8 @@ exports.registerNewCustomer = async (req, res) => {
 
     res.cookie("token", token, {
       httpOnly: true, // Prevent JavaScript access
-      sameSite: "none", // CSRF protection
+      sameSite: "none", // CSRF protection,
+      secure: process.env.VERCEL ? true : false,
       maxAge: 30 * 24 * 60 * 60 * 1000, // 30 days
     });
 
@@ -603,6 +604,7 @@ exports.loginCustomer = async (req, res) => {
     res.cookie("token", token, {
       httpOnly: true, // Prevent JavaScript access
       sameSite: "none", // CSRF protection
+      secure: process.env.VERCEL ? true : false,
       maxAge: 30 * 24 * 60 * 60 * 1000, // 30 days
     });
     res.status(200).json({ message: "Login successful", customer });
