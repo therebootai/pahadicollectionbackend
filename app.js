@@ -9,7 +9,7 @@ const fileUpload = require("express-fileupload");
 const fs = require("fs");
 const path = require("path");
 const port = process.env.PORT;
-const tempFilePath = path.join(__dirname, "temp");
+const tempFilePath = process.env.VERCEL ? "/tmp" : path.join(__dirname, "temp");
 
 if (!fs.existsSync(tempFilePath)) {
   fs.mkdirSync(tempFilePath, { recursive: true });
