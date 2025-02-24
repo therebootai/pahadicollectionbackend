@@ -24,36 +24,52 @@ exports.createProduct = async (req, res) => {
       specification,
       thumbnailIndex,
       tags,
+      is_drafted = false,
     } = req.body;
 
-    let { productImage, hoverImage } = req.files;
-
     // Validate required fields
-    if (!title || !price || !mrp || !productType || !category || !pickup) {
-      return res.status(400).json({ message: "Required fields missing." });
+    if (!title) {
+      return res.status(400).json({ message: "title is required" });
     }
 
-    if (!productImage) {
-      return res.status(400).json({ message: "Product image is required." });
+    if (!Boolean(is_drafted)) {
+      if (!price || !mrp || !productType || !category || !pickup) {
+        return res.status(400).json({ message: "Required fields missing." });
+      }
+      if (!req.files.productImage) {
+        return res.status(400).json({ message: "Product image is required." });
+      }
+
+      if (!req.files.hoverImage) {
+        return res.status(400).json({ message: "Hover image is required." });
+      }
     }
 
-    if (!hoverImage) {
-      return res.status(400).json({ message: "Hover image is required." });
-    }
-
+    let hoverImage = null;
     // Ensure `hoverImage` is always an object (single file)
-    if (Array.isArray(hoverImage)) {
-      hoverImage = hoverImage[0]; // Take the first file if multiple are sent
+
+    if (req.files && req.files.hoverImage) {
+      if (Array.isArray(req.files.hoverImage)) {
+        hoverImage = req.files.hoverImage[0]; // Take the first file if multiple are sent
+      } else {
+        hoverImage = req.files.hoverImage;
+      }
     }
 
     let productImages = [];
+    let productImage = [];
 
     // Ensure `productImage` is an array (multiple files)
-    if (!Array.isArray(productImage)) {
-      productImage = [productImage]; // Convert single file into an array
+    if (req.files && req.files.productImage) {
+      if (!Array.isArray(req.files.productImage)) {
+        productImage = [req.files.productImage]; // Convert single file into an array
+      } else {
+        productImage = req.files.productImage;
+      }
     }
 
     async function savedProductImages() {
+      if (!productImage || productImage.length === 0) return;
       for (let i = 0; i < productImage.length; i++) {
         const productImageResult = await uploadFile(
           productImage[i].tempFilePath,
@@ -72,8 +88,23 @@ exports.createProduct = async (req, res) => {
       }
     }
 
+    async function savedHoverImage() {
+      let hoverImageResult = {};
+      if (hoverImage && hoverImage.tempFilePath) {
+        hoverImageResult = await uploadFile(
+          hoverImage.tempFilePath,
+          hoverImage.mimetype
+        );
+        if (hoverImageResult.error) {
+          return (hoverImageResult = { secure_url: "", public_id: "" });
+        }
+      }
+
+      return hoverImageResult;
+    }
+
     const [hoverImageResult, productId] = await Promise.all([
-      uploadFile(hoverImage.tempFilePath, hoverImage.mimetype),
+      savedHoverImage(),
       generateCustomId(productModel, "productId", "productId"),
       savedProductImages(),
     ]);
@@ -84,15 +115,17 @@ exports.createProduct = async (req, res) => {
 
     const index = parseInt(thumbnailIndex, 10) || 0;
 
-    const thumbnail_image = productImages[index];
+    const thumbnail_image =
+      productImages.length > 0 ? productImages[index] : null;
 
     const newProduct = new productModel({
+      is_drafted: is_drafted === "true" ? true : false,
       productId,
       title,
-      category,
+      category: category ? category : null,
       subCategory,
       subSubCategory,
-      pickup,
+      pickup: pickup ? pickup : null,
       productType,
       main_product: productType === "variant" ? main_product : null,
       variable: productType === "variant" ? JSON.parse(variable) : null,
@@ -103,13 +136,17 @@ exports.createProduct = async (req, res) => {
       discount,
       description,
       variant: [],
-      specification: specification ? JSON.parse(specification) : [], // Convert JSON string to object
+      specification: specification
+        ? JSON.parse(specification)
+        : [{ key: "", value: "" }], // Convert JSON string to object
       productImage: productImages, // Store multiple product images
-      hoverImage: {
-        secure_url: hoverImageResult.secure_url,
-        public_id: hoverImageResult.public_id,
-      },
-      isActive: true, // Default to active
+      hoverImage: hoverImageResult.secure_url
+        ? {
+            secure_url: hoverImageResult.secure_url,
+            public_id: hoverImageResult.public_id,
+          }
+        : {},
+      isActive: is_drafted === "true" ? false : true, // Default to active
       thumbnail_image,
       tags: tags ? JSON.parse(tags) : [],
     });
@@ -155,6 +192,8 @@ exports.getAllProducts = async (req, res) => {
       category, // filter by category
       in_stock, // filter by stock
       tags,
+      is_drafted,
+      isActive,
     } = req.query;
 
     let query = {};
@@ -179,6 +218,14 @@ exports.getAllProducts = async (req, res) => {
 
     if (tags) {
       query.tags = { $in: tags.split(",") }; // Allow multiple tags, comma-separated
+    }
+
+    if (is_drafted !== undefined) {
+      query.is_drafted = is_drafted === "true" ? true : false;
+    }
+
+    if (isActive !== undefined) {
+      query.isActive = isActive === "true" ? true : false;
     }
 
     // Pagination setup
@@ -233,13 +280,43 @@ exports.deleteProductById = async (req, res) => {
     if (!deletedProduct) {
       return res.status(404).json({ message: "Product not found" });
     }
-    await Promise.all([
-      deleteFile(deletedProduct.hoverImage.public_id),
-      deletedProduct.productImage.map((item) => {
-        deleteFile(item.public_id);
-      }),
-      productModel.findByIdAndDelete(deletedProduct._id),
-    ]);
+    let allPromises = [];
+
+    if (deletedProduct.hoverImage.public_id) {
+      allPromises.push(
+        deleteFile(deletedProduct.hoverImage.public_id).catch((error) => {
+          console.error("Error deleting hover image:", error);
+        })
+      );
+    }
+
+    if (deletedProduct.productImage.length > 0) {
+      for (let i = 0; i < deletedProduct.productImage.length; i++) {
+        allPromises.push(deleteFile(deletedProduct.productImage[i].public_id));
+      }
+    }
+
+    if (deletedProduct.attribute.length > 0) {
+      for (let i = 0; i < deletedProduct.attribute.length; i++) {
+        allPromises.push(
+          attributeModel.updateMany(
+            { _id: deletedProduct.attribute[i] },
+            { $pull: { products: deletedProduct._id } }
+          )
+        );
+      }
+    }
+
+    allPromises.push(
+      productModel.findOneAndDelete({
+        $or: [
+          { _id: mongoose.Types.ObjectId.isValid(id) ? id : undefined },
+          { productId: id },
+        ],
+      })
+    );
+
+    await Promise.all(allPromises);
     res.status(200).json({ message: "Product Data Delete Successfully" });
   } catch (error) {
     console.error("Error deleting Product details:", error);
@@ -273,6 +350,7 @@ exports.updateProductById = async (req, res) => {
       isActive,
       tags,
       thumbnailIndex,
+      is_drafted,
     } = req.body;
 
     const updatedProduct = await productModel.findOne({
@@ -287,7 +365,8 @@ exports.updateProductById = async (req, res) => {
     }
 
     if (req.files && req.files.hoverImage) {
-      const hoverImage = req.files.hoverImage[0];
+      const hoverImage = req.files.hoverImage;
+
       // Delete old hover image
       if (updatedProduct.hoverImage.public_id) {
         await deleteFile(updatedProduct.hoverImage.public_id);
@@ -457,11 +536,18 @@ exports.updateProductById = async (req, res) => {
       ? JSON.parse(specification)
       : updatedProduct.specification;
     updatedProduct.isActive =
-      isActive !== undefined ? isActive : updatedProduct.isActive;
+      isActive !== undefined ? Boolean(isActive) : updatedProduct.isActive;
     updatedProduct.tags = tags ? JSON.parse(tags) : updatedProduct.tags;
-    updatedProduct.thumbnail_image = parseInt(thumbnailIndex)
-      ? updatedProduct.productImage[parseInt(thumbnailIndex)]
+    updatedProduct.thumbnail_image = thumbnailIndex
+      ? {
+          public_id:
+            updatedProduct.productImage[parseInt(thumbnailIndex)].public_id,
+          secure_url:
+            updatedProduct.productImage[parseInt(thumbnailIndex)].secure_url,
+        }
       : updatedProduct.thumbnail_image;
+
+    updatedProduct.is_drafted = is_drafted === "true" ? true : false;
 
     const product = await updatedProduct.save();
 

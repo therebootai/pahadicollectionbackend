@@ -1,6 +1,7 @@
 const mongoose = require("mongoose");
 const generateCustomId = require("../middlewares/ganerateCustomId");
 const attributeModel = require("../models/attributeModel");
+const productModel = require("../models/productModel");
 
 exports.createAttribute = async (req, res) => {
   try {
@@ -169,6 +170,11 @@ exports.deleteAttributeById = async (req, res) => {
     if (!deletedAttribute) {
       return res.status(404).json({ message: "Attribute not found." });
     }
+    await productModel.updateMany(
+      { attribute: deletedAttribute._id }, // Match products containing the deleted attribute
+      { $pull: { attribute: deletedAttribute._id } } // Remove the attribute from the array
+    );
+
     res.status(200).json({ message: "Attribute deleted successfully." });
   } catch (error) {
     console.error("Error deleting attribute:", error);

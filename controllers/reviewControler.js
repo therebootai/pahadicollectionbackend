@@ -1,3 +1,4 @@
+const mongoose = require("mongoose");
 const generateCustomId = require("../middlewares/ganerateCustomId");
 const customerModel = require("../models/customerModel");
 const productModel = require("../models/productModel");
@@ -45,6 +46,86 @@ exports.addNewReview = async (req, res) => {
     res
       .status(201)
       .json({ message: "Review added successfully", review: savedReview });
+  } catch (error) {
+    console.log(error);
+    res
+      .status(500)
+      .json({ message: "Internal server error", error: error.message });
+  }
+};
+
+exports.getAllReviews = async (req, res) => {
+  try {
+    const {
+      page = 1,
+      limit = 10,
+      sortBy = "createdAt",
+      order = "desc",
+      rating,
+      isActive,
+    } = req.query;
+
+    page = parseInt(page);
+    limit = parseInt(limit);
+
+    const sortOrder = order === "asc" ? 1 : -1;
+
+    let query = {};
+
+    if (isActive !== undefined) {
+      query.isActive = isActive === "true" ? true : false;
+    }
+
+    if (rating) {
+      query.rating = rating;
+    }
+
+    const [totalCount, reviews] = await Promise.all([
+      reviewModel.countDocuments(query),
+      reviewModel
+        .find(query)
+        .populate("productId")
+        .populate("customerId")
+        .sort({ [sortBy]: sortOrder })
+        .skip((page - 1) * limit)
+        .limit(limit),
+    ]);
+
+    res.status(200).json({
+      reviews,
+      pagination: {
+        totalCount,
+        currentPage: page,
+        totalPages: Math.ceil(totalCount / limit),
+      },
+    });
+  } catch (error) {
+    console.log(error);
+    res
+      .status(500)
+      .json({ message: "Internal server error", error: error.message });
+  }
+};
+
+exports.getReviewById = async (req, res) => {
+  try {
+    const { id } = req.params;
+
+    const review = await reviewModel
+      .findOne({
+        $or: [
+          { _id: mongoose.Types.ObjectId.isValid(id) ? id : null },
+          { reviewId: id },
+        ],
+      })
+      .populate("productId")
+      .populate("customerId");
+
+    if (!review) {
+      return res.status(404).json({ message: "Review not found." });
+    }
+
+    res.status(200).json({ message: "Review fetched successfully.", review });
   } catch (error) {
     console.log(error);
     res

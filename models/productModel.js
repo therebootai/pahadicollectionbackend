@@ -12,12 +12,18 @@ const productSchema = new mongoose.Schema(
       type: String,
       required: true,
     },
+    is_drafted: {
+      type: Boolean,
+      required: true,
+      default: false,
+    },
     category: {
       type: mongoose.Schema.Types.ObjectId,
       ref: "Categories",
       required: function () {
-        return this.is_drafted;
+        return !this.get("is_drafted");
       },
+      default: null,
     },
 
     subCategory: {
@@ -31,13 +37,14 @@ const productSchema = new mongoose.Schema(
       type: mongoose.Schema.Types.ObjectId,
       ref: "PickUps",
       required: function () {
-        return this.is_drafted;
+        return !this.get("is_drafted");
       },
+      default: null,
     },
     productType: {
       type: String,
       required: function () {
-        return this.is_drafted;
+        return !this.get("is_drafted");
       },
       enum: ["single", "variant"],
     },
@@ -47,18 +54,25 @@ const productSchema = new mongoose.Schema(
       required: function () {
         return this.productType === "variant";
       },
+      default: null,
     },
     price: {
       type: Number,
-      required: true,
+      required: function () {
+        return !this.get("is_drafted");
+      },
     },
     mrp: {
       type: Number,
-      required: true,
+      required: function () {
+        return !this.get("is_drafted");
+      },
     },
     in_stock: {
       type: Number,
-      required: true,
+      required: function () {
+        return !this.get("is_drafted");
+      },
     },
     attribute: [
       {
@@ -100,13 +114,13 @@ const productSchema = new mongoose.Schema(
         key: {
           type: String,
           required: function () {
-            return this.is_drafted;
+            return !this.$parent().is_drafted;
           },
         }, // Specification Key
         value: {
           type: String,
           required: function () {
-            return this.is_drafted;
+            return !this.$parent().is_drafted;
           },
         }, // Specification Value
       },
@@ -114,8 +128,8 @@ const productSchema = new mongoose.Schema(
     isActive: {
       type: Boolean,
       required: true,
-      default: function () {
-        return !this.is_drafted;
+      required: function () {
+        return !this.get("is_drafted");
       },
     },
     productImage: [
@@ -123,13 +137,13 @@ const productSchema = new mongoose.Schema(
         secure_url: {
           type: String,
           required: function () {
-            return this.is_drafted;
+            return !this.$parent().is_drafted;
           },
         },
         public_id: {
           type: String,
           required: function () {
-            return this.is_drafted;
+            return !this.$parent().is_drafted;
           },
         },
       },
@@ -138,13 +152,13 @@ const productSchema = new mongoose.Schema(
       secure_url: {
         type: String,
         required: function () {
-          return this.is_drafted;
+          return !this.$parent().is_drafted;
         },
       },
       public_id: {
         type: String,
         required: function () {
-          return this.is_drafted;
+          return !this.$parent().is_drafted;
         },
       },
     },
@@ -152,13 +166,13 @@ const productSchema = new mongoose.Schema(
       secure_url: {
         type: String,
         required: function () {
-          return this.is_drafted;
+          return !this.$parent().is_drafted;
         },
       },
       public_id: {
         type: String,
         required: function () {
-          return this.is_drafted;
+          return !this.$parent().is_drafted;
         },
       },
     },
@@ -190,11 +204,6 @@ const productSchema = new mongoose.Schema(
       type: String,
       required: true,
       unique: true,
-    },
-    is_drafted: {
-      type: Boolean,
-      required: true,
-      default: false,
     },
   },
   {
