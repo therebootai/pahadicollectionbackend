@@ -59,7 +59,7 @@ exports.registerNewCustomer = async (req, res) => {
 
     res.cookie("token", token, {
       httpOnly: true, // Prevent JavaScript access
-      sameSite: "strict", // CSRF protection
+      // sameSite: "strict", // CSRF protection
       maxAge: 30 * 24 * 60 * 60 * 1000, // 30 days
     });
 
@@ -602,7 +602,7 @@ exports.loginCustomer = async (req, res) => {
     const token = generateToken(...customer);
     res.cookie("token", token, {
       httpOnly: true, // Prevent JavaScript access
-      sameSite: "strict", // CSRF protection
+      // sameSite: "strict", // CSRF protection
       maxAge: 30 * 24 * 60 * 60 * 1000, // 30 days
     });
     res.status(200).json({ message: "Login successful", customer });
