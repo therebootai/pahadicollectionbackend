@@ -31,7 +31,16 @@ const paymentRouter = require("./router/paymentRoute");
 const attributeRouter = require("./router/attributeRoute");
 const reviewRouter = require("./router/reviewRoute");
 
-app.use(cors({ origin: process.env.ORIGIN_URL, credentials: true }));
+app.use(
+  cors({
+    origin: [
+      "http://localhost:5173",
+      "http://localhost:3000",
+      "https://pahadi-collection-admin-panel.netlify.app",
+    ],
+    credentials: true,
+  })
+);
 app.use(cookieParser());
 app.use(express.json());
 app.use(fileUpload({ useTempFiles: true, tempFileDir: tempFilePath }));
