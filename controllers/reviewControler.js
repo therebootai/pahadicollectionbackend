@@ -56,13 +56,15 @@ exports.addNewReview = async (req, res) => {
 
 exports.getAllReviews = async (req, res) => {
   try {
-    const {
+    let {
       page = 1,
       limit = 10,
       sortBy = "createdAt",
       order = "desc",
       rating,
       isActive,
+      productId,
+      customerId,
     } = req.query;
 
     page = parseInt(page);
@@ -78,6 +80,14 @@ exports.getAllReviews = async (req, res) => {
 
     if (rating) {
       query.rating = rating;
+    }
+
+    if (productId) {
+      query.productId = productId;
+    }
+
+    if (customerId) {
+      query.customerId = customerId;
     }
 
     const [totalCount, reviews] = await Promise.all([
@@ -126,6 +136,75 @@ exports.getReviewById = async (req, res) => {
     }
 
     res.status(200).json({ message: "Review fetched successfully.", review });
+  } catch (error) {
+    console.log(error);
+    res
+      .status(500)
+      .json({ message: "Internal server error", error: error.message });
+  }
+};
+
+exports.updateReviewById = async (req, res) => {
+  try {
+    const { id } = req.params;
+    const { rating, title, content, isActive } = req.body;
+
+    const updatedReview = await reviewModel
+      .findOneAndUpdate(
+        {
+          $or: [
+            { _id: mongoose.Types.ObjectId.isValid(id) ? id : null },
+            { reviewId: id },
+          ],
+        },
+        { rating, title, content, isActive },
+        { new: true, runValidators: true }
+      )
+      .populate("productId")
+      .populate("customerId");
+
+    if (!updatedReview) {
+      return res.status(404).json({ message: "Review not found." });
+    }
+
+    res
+      .status(200)
+      .json({ message: "Review updated successfully.", review: updatedReview });
+  } catch (error) {
+    console.log(error);
+    res
+      .status(500)
+      .json({ message: "Internal server error", error: error.message });
+  }
+};
+
+exports.deleteReviewById = async (req, res) => {
+  try {
+    const { id } = req.params;
+
+    const deletedReview = await reviewModel.findOneAndDelete({
+      $or: [
+        { _id: mongoose.Types.ObjectId.isValid(id) ? id : null },
+        { reviewId: id },
+      ],
+    });
+
+    if (!deletedReview) {
+      return res.status(404).json({ message: "Review not found." });
+    }
+
+    await Promise.all([
+      productModel.findByIdAndUpdate(deletedReview.productId, {
+        $pull: { reviews: deletedReview._id },
+      }),
+      customerModel.findByIdAndUpdate(deletedReview.customerId, {
+        $pull: { reviewed: deletedReview._id },
+      }),
+    ]);
+
+    res
+      .status(200)
+      .json({ message: "Review deleted successfully.", review: deletedReview });
   } catch (error) {
     console.log(error);
     res

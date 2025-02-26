@@ -351,6 +351,9 @@ exports.updateProductById = async (req, res) => {
       tags,
       thumbnailIndex,
       is_drafted,
+      product_viewed,
+      product_added,
+      product_ordered,
     } = req.body;
 
     const updatedProduct = await productModel.findOne({
@@ -548,6 +551,12 @@ exports.updateProductById = async (req, res) => {
       : updatedProduct.thumbnail_image;
 
     updatedProduct.is_drafted = is_drafted === "true" ? true : false;
+    updatedProduct.product_added =
+      product_added || updatedProduct.product_added;
+    updatedProduct.product_ordered =
+      product_ordered || updatedProduct.product_ordered;
+    updatedProduct.product_viewed =
+      product_viewed || updatedProduct.product_viewed;
 
     const product = await updatedProduct.save();
 
