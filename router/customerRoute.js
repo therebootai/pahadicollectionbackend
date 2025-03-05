@@ -14,7 +14,9 @@ const {
   loginCustomer,
   logoutCustomer,
   updateCustomerById,
+  checkAuthorization,
 } = require("../controllers/customerControler");
+const { authenticateUser } = require("../middlewares/jsonToken");
 const customerRouter = express.Router();
 
 customerRouter.post("/", registerNewCustomer);
@@ -38,6 +40,8 @@ customerRouter.put("/cart/remove", removeFromCart);
 customerRouter.post("/login", loginCustomer);
 
 customerRouter.get("/logout", logoutCustomer);
+
+customerRouter.get("/check-auth", authenticateUser, checkAuthorization);
 
 customerRouter
   .route("/:id")
