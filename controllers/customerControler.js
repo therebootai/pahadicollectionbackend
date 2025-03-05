@@ -60,7 +60,7 @@ exports.registerNewCustomer = async (req, res) => {
     res.cookie("token", token, {
       httpOnly: true, // Prevent JavaScript access
       sameSite: "none", // CSRF protection,
-      secure: process.env.VERCEL ? true : false,
+      secure: true,
       maxAge: 30 * 24 * 60 * 60 * 1000, // 30 days
     });
 
@@ -590,9 +590,21 @@ exports.loginCustomer = async (req, res) => {
     if (!email_or_phone || !password) {
       return res.status(400).json({ message: "All fields are required." });
     }
-    const customer = await customerModel.findOne({
-      $or: [{ email: email_or_phone }, { mobile: email_or_phone }],
-    });
+    const customer = await customerModel
+      .findOneAndUpdate(
+        {
+          $or: [{ email: email_or_phone }, { mobile: email_or_phone }],
+        },
+        { $set: { isLogin: true } },
+        { new: true, runValidators: true }
+      )
+      .populate("cart")
+      .populate("orders")
+      .populate("wishlist")
+      .populate("payments")
+      .populate("used_coupon")
+      .populate("reviewed");
+
     if (!customer) {
       return res.status(404).json({ message: "Customer not found" });
     }
@@ -600,11 +612,11 @@ exports.loginCustomer = async (req, res) => {
     if (!(await customer.matchPassword(password))) {
       return res.status(401).json({ message: "Incorrect password" });
     }
-    const token = generateToken(...customer);
+    const token = generateToken({ ...customer });
     res.cookie("token", token, {
       httpOnly: true, // Prevent JavaScript access
       sameSite: "none", // CSRF protection
-      secure: process.env.VERCEL ? true : false,
+      secure: true,
       maxAge: 30 * 24 * 60 * 60 * 1000, // 30 days
     });
     res.status(200).json({ message: "Login successful", customer });
@@ -619,11 +631,38 @@ exports.logoutCustomer = async (req, res) => {
     res.clearCookie("token", {
       httpOnly: true,
       sameSite: "none",
-      secure: process.env.VERCEL ? true : false,
+      secure: true,
     });
     res.status(200).json({ message: "Logout successful" });
   } catch (error) {
     console.error("Error logging out customer:", error);
+    res.status(500).json({ message: "Internal Server Error" });
+  }
+};
+
+exports.checkAuthorization = async (req, res) => {
+  try {
+    const { user } = req;
+
+    if (!user) {
+      return res.status(401).json({ message: "Unauthorized" });
+    }
+    const loggedUser = await customerModel
+      .findById(user._id)
+      .populate("cart")
+      .populate("orders")
+      .populate("wishlist")
+      .populate("payments")
+      .populate("used_coupon")
+      .populate("reviewed");
+
+    if (!loggedUser) {
+      return res.status(401).json({ message: "User not found" });
+    }
+
+    res.status(200).json({ message: "Authorized", user: loggedUser });
+  } catch (error) {
+    console.error("Error checking Authorization user:", error);
     res.status(500).json({ message: "Internal Server Error" });
   }
 };
