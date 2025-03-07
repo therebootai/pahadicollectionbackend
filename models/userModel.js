@@ -53,6 +53,11 @@ userSchema.pre("save", async function (next) {
     next(err);
   }
 });
+
+userSchema.methods.matchPassword = async function (enteredPassword) {
+  return bcrypt.compare(enteredPassword, this.password);
+};
+
 const Users = mongoose.model("Users", userSchema);
 
 module.exports = Users;

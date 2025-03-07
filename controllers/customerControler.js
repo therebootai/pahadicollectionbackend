@@ -59,7 +59,8 @@ exports.registerNewCustomer = async (req, res) => {
 
     res.cookie("token", token, {
       httpOnly: true, // Prevent JavaScript access
-      sameSite: "strict", // CSRF protection
+      sameSite: "none", // CSRF protection,
+      secure: true,
       maxAge: 30 * 24 * 60 * 60 * 1000, // 30 days
     });
 
@@ -243,13 +244,145 @@ exports.deleteCustomerById = async (req, res) => {
   }
 };
 
+exports.updateCustomerById = async (req, res) => {
+  try {
+    const { id } = req.params;
+    const {
+      name,
+      email,
+      mobile,
+      address,
+      password,
+      cart,
+      wishlist,
+      used_coupon,
+      isLogin,
+      is_disabled,
+    } = req.body;
+
+    const customer = await customerModel.findOne({
+      $or: [
+        { _id: mongoose.Types.ObjectId.isValid(id) ? id : null },
+        { customerId: id },
+      ],
+    });
+
+    if (!customer) {
+      return res.status(404).json({ message: "Customer not found." });
+    }
+
+    if (email && email !== customer.email) {
+      const emailExists = await customerModel.findOne({ email });
+      if (emailExists) {
+        return res.status(400).json({ message: "Email is already in use." });
+      }
+      customer.email = email;
+    }
+
+    if (mobile && mobile !== customer.mobile) {
+      const mobileExists = await customerModel.findOne({ mobile });
+      if (mobileExists) {
+        return res
+          .status(400)
+          .json({ message: "Mobile number is already in use." });
+      }
+      customer.mobile = mobile;
+    }
+
+    // Update other fields if provided
+    if (name) customer.name = name;
+    if (address) customer.address = address;
+    if (typeof isLogin === "boolean") customer.isLogin = isLogin;
+    if (typeof is_disabled === "boolean") customer.is_disabled = is_disabled;
+
+    // Update password (Triggers pre-save hook for hashing)
+    if (password) {
+      customer.password = password; // Will be hashed by pre("save") middleware
+    }
+
+    // Update arrays while avoiding duplicates
+    if (cart) {
+      customer.cart = [...new Set([...customer.cart, ...cart])];
+    }
+    if (wishlist) {
+      customer.wishlist = [...new Set([...customer.wishlist, ...wishlist])];
+    }
+
+    if (used_coupon) {
+      customer.used_coupon = [
+        ...new Set([...customer.used_coupon, ...used_coupon]),
+      ];
+    }
+
+    // Handle profile image update
+    if (req.files && req.files.profileImage) {
+      const profileImage = req.files.profileImage[0];
+
+      // Upload new image to Cloudinary
+      const profileImageResult = await uploadFile(
+        profileImage.tempFilePath,
+        profileImage.mimeType
+      );
+
+      if (profileImageResult.error) {
+        return res
+          .status(500)
+          .json({ message: "Error uploading profile image." });
+      }
+
+      // If the customer has an existing profile image, remove the old one from Cloudinary
+      if (customer.profileImage?.public_id) {
+        await deleteFile(customer.profileImage.public_id);
+      }
+
+      customer.profileImage = {
+        secure_url: profileImageResult.secure_url,
+        public_id: profileImageResult.public_id,
+      };
+    }
+
+    // Save customer to trigger pre-save hook for password hashing
+    await customer.save();
+
+    return res.status(200).json({
+      message: "Customer updated successfully.",
+      customer,
+    });
+  } catch (error) {
+    console.log("Error updateing customer:", error);
+    res.status(500).json({ message: "Internal Server Error", error: error });
+  }
+};
+
 exports.getAllWishlist = async (req, res) => {
   try {
-    const { minPrice, maxPrice, category, name } = req.query;
+    const {
+      minPrice,
+      maxPrice,
+      category,
+      name,
+      page = 1,
+      limit = 10,
+      customerId,
+    } = req.query;
+
+    const pageNumber = parseInt(page, 10);
+    const limitNumber = parseInt(limit, 10);
+
+    const query = {};
+
+    if (customerId) {
+      query.$or = [
+        { customerId: customerId },
+        {
+          _id: mongoose.Types.ObjectId.isValid(customerId) ? customerId : null,
+        },
+      ];
+    }
 
     // Find all customers and populate the wishlist
     const customers = await customerModel
-      .find()
+      .find(query)
       .populate({
         path: "wishlist",
         match: {
@@ -266,7 +399,21 @@ exports.getAllWishlist = async (req, res) => {
       .flatMap((customer) => customer.wishlist)
       .filter(Boolean);
 
-    res.status(200).json({ wishlist: allWishlistItems });
+    const totalCount = allWishlistItems.length;
+    const totalPages = Math.ceil(totalCount / limitNumber);
+    const paginatedWishlist = allWishlistItems.slice(
+      (pageNumber - 1) * limitNumber,
+      pageNumber * limitNumber
+    );
+
+    res.status(200).json({
+      wishlist: paginatedWishlist,
+      pagination: {
+        totalCount,
+        currentPage: pageNumber,
+        totalPages: totalPages === 0 ? 1 : totalPages,
+      },
+    });
   } catch (error) {
     console.error("Error getting wishlist details:", error);
     return res.status(500).json({
@@ -339,6 +486,7 @@ exports.removeFromWishlist = async (req, res) => {
     res.status(500).json({ message: "Server error", error: error.message });
   }
 };
+
 exports.getAllCart = async (req, res) => {
   try {
     const { minPrice, maxPrice, category, name } = req.query;
@@ -442,9 +590,21 @@ exports.loginCustomer = async (req, res) => {
     if (!email_or_phone || !password) {
       return res.status(400).json({ message: "All fields are required." });
     }
-    const customer = await customerModel.findOne({
-      $or: [{ email: email_or_phone }, { mobile: email_or_phone }],
-    });
+    const customer = await customerModel
+      .findOneAndUpdate(
+        {
+          $or: [{ email: email_or_phone }, { mobile: email_or_phone }],
+        },
+        { $set: { isLogin: true } },
+        { new: true, runValidators: true }
+      )
+      .populate("cart")
+      .populate("orders")
+      .populate("wishlist")
+      .populate("payments")
+      .populate("used_coupon")
+      .populate("reviewed");
+
     if (!customer) {
       return res.status(404).json({ message: "Customer not found" });
     }
@@ -452,10 +612,11 @@ exports.loginCustomer = async (req, res) => {
     if (!(await customer.matchPassword(password))) {
       return res.status(401).json({ message: "Incorrect password" });
     }
-    const token = generateToken(...customer);
+    const token = generateToken({ ...customer });
     res.cookie("token", token, {
       httpOnly: true, // Prevent JavaScript access
-      sameSite: "strict", // CSRF protection
+      sameSite: "none", // CSRF protection
+      secure: true,
       maxAge: 30 * 24 * 60 * 60 * 1000, // 30 days
     });
     res.status(200).json({ message: "Login successful", customer });
@@ -467,9 +628,16 @@ exports.loginCustomer = async (req, res) => {
 
 exports.logoutCustomer = async (req, res) => {
   try {
+    const { user } = req;
+    await customerModel.findByIdAndUpdate(
+      user._id,
+      { $set: { isLogin: false } },
+      { new: true, runValidators: true }
+    );
     res.clearCookie("token", {
       httpOnly: true,
-      sameSite: "strict",
+      sameSite: "none",
+      secure: true,
     });
     res.status(200).json({ message: "Logout successful" });
   } catch (error) {
@@ -478,4 +646,29 @@ exports.logoutCustomer = async (req, res) => {
   }
 };
 
+exports.checkAuthorization = async (req, res) => {
+  try {
+    const { user } = req;
 
+    if (!user) {
+      return res.status(401).json({ message: "Unauthorized" });
+    }
+    const loggedUser = await customerModel
+      .findById(user._id)
+      .populate("cart")
+      .populate("orders")
+      .populate("wishlist")
+      .populate("payments")
+      .populate("used_coupon")
+      .populate("reviewed");
+
+    if (!loggedUser) {
+      return res.status(401).json({ message: "User not found" });
+    }
+
+    res.status(200).json({ message: "Authorized", user: loggedUser });
+  } catch (error) {
+    console.error("Error checking Authorization user:", error);
+    res.status(500).json({ message: "Internal Server Error" });
+  }
+};
