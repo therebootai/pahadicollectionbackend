@@ -628,6 +628,12 @@ exports.loginCustomer = async (req, res) => {
 
 exports.logoutCustomer = async (req, res) => {
   try {
+    const { user } = req;
+    await customerModel.findByIdAndUpdate(
+      user._id,
+      { $set: { isLogin: false } },
+      { new: true, runValidators: true }
+    );
     res.clearCookie("token", {
       httpOnly: true,
       sameSite: "none",
