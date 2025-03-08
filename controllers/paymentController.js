@@ -39,8 +39,6 @@ exports.getAllPayments = async (req, res) => {
     });
   } catch (error) {
     console.log("Error getting payment details:", error);
-    res
-      .status(500)
-      .json({ message: "Internal Server Error", error: error.message });
+    res.status(500).json({ message: error.message });
   }
 };

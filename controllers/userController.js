@@ -43,8 +43,7 @@ exports.createUser = async (req, res) => {
           ? "Email already exists."
           : `${field} must be unique. The value '${error.keyValue[field]}' already exists.`;
       return res.status(400).json({
-        message: "Validation Error",
-        error: message,
+        message,
       });
     }
     res.status(500).json({ message: error.message });
@@ -143,7 +142,7 @@ exports.loginUser = async (req, res) => {
     res.status(200).json({ message: "Login successful", user });
   } catch (error) {
     console.log("Error logging for user:", error);
-    res.status(500).json({ message: "Internal Server Error", error: error });
+    res.status(500).json({ message: error.message });
   }
 };
 
@@ -157,9 +156,7 @@ exports.logoutUser = async (req, res) => {
     res.status(200).json({ message: "Logout successful" });
   } catch (error) {
     console.error("Error logging out user:", error);
-    res
-      .status(500)
-      .json({ message: "Internal Server Error", error: error.message });
+    res.status(500).json({ message: error.message });
   }
 };
 
@@ -177,6 +174,6 @@ exports.checkAuthorization = async (req, res) => {
     res.status(200).json({ message: "Authorized", user: loggedUser });
   } catch (error) {
     console.error("Error checking Authorization user:", error);
-    res.status(500).json({ message: "Internal Server Error" });
+    res.status(500).json({ message: error.message });
   }
 };

@@ -49,7 +49,7 @@ exports.createNewCoupon = async (req, res) => {
     });
   } catch (error) {
     console.log("Error creating new coupon:", error);
-    res.status(500).json({ message: "Internal Server Error", error: error });
+    res.status(500).json({ message: error.message });
   }
 };
 
@@ -121,7 +121,7 @@ exports.getAllCoupons = async (req, res) => {
     });
   } catch (error) {
     console.log("Error fetching coupons:", error);
-    res.status(500).json({ message: "Internal Server Error", error: error });
+    res.status(500).json({ message: error.message });
   }
 };
 
@@ -174,9 +174,7 @@ exports.searchCoupons = async (req, res) => {
     });
   } catch (error) {
     console.error("Error searching coupons:", error);
-    res
-      .status(500)
-      .json({ message: "Internal Server Error", error: error.message });
+    res.status(500).json({ message: error.message });
   }
 };
 
@@ -200,7 +198,7 @@ exports.getCouponById = async (req, res) => {
     res.status(200).json({ message: "Coupon fetched successfully", coupon });
   } catch (error) {
     console.error("Error getting coupon by ID:", error);
-    res.status(500).json({ message: "Internal Server Error", error: error });
+    res.status(500).json({ message: error.message });
   }
 };
 
@@ -241,7 +239,7 @@ exports.updateCouponById = async (req, res) => {
     });
   } catch (error) {
     console.error("Error updating coupon by ID:", error);
-    res.status(500).json({ message: "Internal Server Error", error: error });
+    res.status(500).json({ message: error.message });
   }
 };
 
@@ -266,6 +264,6 @@ exports.deleteCouponById = async (req, res) => {
       .json({ message: "Coupon deleted successfully", success: true });
   } catch (error) {
     console.error("Error deleting coupon by ID:", error);
-    res.status(500).json({ message: "Internal Server Error", error: error });
+    res.status(500).json({ message: error.message });
   }
 };

@@ -31,8 +31,7 @@ exports.createVariables = async (req, res) => {
           ? "This  Variable Name already exists."
           : `${field} must be unique. The value '${error.keyValue[field]}' already exists.`;
       return res.status(400).json({
-        message: "Validation Error",
-        error: message,
+        message,
       });
     }
     console.error("Error creating Variable details:", error);
