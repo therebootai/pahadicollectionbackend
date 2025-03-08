@@ -39,7 +39,7 @@ customerRouter.put("/cart/remove", removeFromCart);
 
 customerRouter.post("/login", loginCustomer);
 
-customerRouter.get("/logout", logoutCustomer);
+customerRouter.get("/logout", authenticateUser, logoutCustomer);
 
 customerRouter.get("/check-auth", authenticateUser, checkAuthorization);
 

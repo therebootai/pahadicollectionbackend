@@ -29,9 +29,7 @@ exports.createAttribute = async (req, res) => {
       .json({ message: "Attribute created successfully.", newAttribute });
   } catch (error) {
     console.error("Error creating attribute:", error);
-    res
-      .status(500)
-      .json({ message: "Internal Server Error", error: error.message });
+    res.status(500).json({ message: error.message });
   }
 };
 
@@ -77,7 +75,7 @@ exports.getAllAttributes = async (req, res) => {
     });
   } catch (error) {
     console.error("Error fetching attributes:", error);
-    res.status(500).json({ message: "Internal Server Error" });
+    res.status(500).json({ message: error.message });
   }
 };
 
@@ -114,7 +112,7 @@ exports.searchAllAttributes = async (req, res) => {
     });
   } catch (error) {
     console.error("Error searching attributes:", error);
-    res.status(500).json({ message: "Internal Server Error" });
+    res.status(500).json({ message: error.message });
   }
 };
 
@@ -152,9 +150,7 @@ exports.updateAttributeById = async (req, res) => {
     });
   } catch (error) {
     console.error("Error updating attribute:", error);
-    res
-      .status(500)
-      .json({ message: "Internal Server Error", error: error.message });
+    res.status(500).json({ message: error.message });
   }
 };
 
@@ -178,9 +174,7 @@ exports.deleteAttributeById = async (req, res) => {
     res.status(200).json({ message: "Attribute deleted successfully." });
   } catch (error) {
     console.error("Error deleting attribute:", error);
-    res
-      .status(500)
-      .json({ message: "Internal Server Error", error: error.message });
+    res.status(500).json({ message: error.message });
   }
 };
 
@@ -203,6 +197,6 @@ exports.getAttributeById = async (req, res) => {
       .json({ message: "Attribute fetched successfully.", attribute });
   } catch (error) {
     console.error("Error getting attribute by ID:", error);
-    res.status(500).json({ message: "Internal Server Error", error: error });
+    res.status(500).json({ message: error.message });
   }
 };

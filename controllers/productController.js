@@ -172,10 +172,7 @@ exports.createProduct = async (req, res) => {
     });
   } catch (error) {
     console.error("Error creating Product details:", error);
-    return res.status(500).json({
-      message: "Internal Server Error",
-      error: error.message,
-    });
+    return res.status(500).json({ message: error.message });
   }
 };
 
@@ -261,10 +258,7 @@ exports.getAllProducts = async (req, res) => {
     });
   } catch (error) {
     console.error("Error getting Product details:", error);
-    return res.status(500).json({
-      message: "Internal Server Error",
-      error: error.message,
-    });
+    return res.status(500).json({ message: error.message });
   }
 };
 
@@ -320,10 +314,7 @@ exports.deleteProductById = async (req, res) => {
     res.status(200).json({ message: "Product Data Delete Successfully" });
   } catch (error) {
     console.error("Error deleting Product details:", error);
-    return res.status(500).json({
-      message: "Internal Server Error",
-      error: error.message,
-    });
+    return res.status(500).json({ message: error.message });
   }
 };
 
@@ -565,10 +556,7 @@ exports.updateProductById = async (req, res) => {
       .json({ message: "Product updated Successfully", data: product });
   } catch (error) {
     console.error("Error updateing Product details:", error);
-    return res.status(500).json({
-      message: "Internal Server Error",
-      error: error.message,
-    });
+    return res.status(500).json({ message: error.message });
   }
 };
 
@@ -597,10 +585,7 @@ exports.getProductById = async (req, res) => {
       .json({ message: "Product fetched successfully", data: product });
   } catch (error) {
     console.error("Error getting Product details:", error);
-    return res.status(500).json({
-      message: "Internal Server Error",
-      error: error.message,
-    });
+    return res.status(500).json({ message: error.message });
   }
 };
 
@@ -649,9 +634,6 @@ exports.searchProduct = async (req, res) => {
     });
   } catch (error) {
     console.error("Error searching products:", error);
-    return res.status(500).json({
-      message: "Internal Server Error",
-      error: error.message,
-    });
+    return res.status(500).json({ message: error.message });
   }
 };

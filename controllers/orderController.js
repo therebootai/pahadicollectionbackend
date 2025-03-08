@@ -68,7 +68,7 @@ exports.createNewOrder = async (req, res) => {
     });
   } catch (error) {
     console.log("Error creating order:", error);
-    res.status(500).json({ message: "Internal Server Error", error: error });
+    res.status(500).json({ message: error.message });
   }
 };
 
@@ -112,7 +112,7 @@ exports.getAllOrders = async (req, res) => {
     });
   } catch (error) {
     console.log("Error fetching orders:", error);
-    res.status(500).json({ message: "Internal Server Error", error: error });
+    res.status(500).json({ message: error.message });
   }
 };
 
@@ -151,7 +151,7 @@ exports.searchOrders = async (req, res) => {
     });
   } catch (error) {
     console.log("Error searching orders:", error);
-    res.status(500).json({ message: "Internal Server Error", error: error });
+    res.status(500).json({ message: error.message });
   }
 };
 
@@ -176,7 +176,7 @@ exports.getOrderDetailsById = async (req, res) => {
     res.status(200).json({ order });
   } catch (error) {
     console.log("Error fetching order details:", error);
-    res.status(500).json({ message: "Internal Server Error", error: error });
+    res.status(500).json({ message: error.message });
   }
 };
 
@@ -200,7 +200,7 @@ exports.deleteOrder = async (req, res) => {
       .json({ success: true, message: "Order Data Delete Successfully" });
   } catch (error) {
     console.log("Error deleting order:", error);
-    res.status(500).json({ message: "Internal Server Error", error: error });
+    res.status(500).json({ message: error.message });
   }
 };
 
@@ -234,6 +234,6 @@ exports.updateOrderDetails = async (req, res) => {
     });
   } catch (error) {
     console.log("Error updating order details:", error);
-    res.status(500).json({ message: "Internal Server Error", error: error });
+    res.status(500).json({ message: error.message });
   }
 };

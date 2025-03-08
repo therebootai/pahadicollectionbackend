@@ -138,10 +138,7 @@ exports.getCategories = async (req, res) => {
     });
   } catch (error) {
     console.error("Error fetching categories:", error);
-    res.status(500).json({
-      message: "Internal server error.",
-      error: error.message,
-    });
+    res.status(500).json({ message: error.message });
   }
 };
 
@@ -311,10 +308,7 @@ exports.updateImage = async (req, res) => {
     });
   } catch (error) {
     console.error("Error uploading category image:", error);
-    res.status(500).json({
-      message: "Internal server error.",
-      error: error.message,
-    });
+    res.status(500).json({ message: error.message });
   }
 };
 

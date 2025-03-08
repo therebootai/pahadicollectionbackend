@@ -48,9 +48,7 @@ exports.addNewReview = async (req, res) => {
       .json({ message: "Review added successfully", review: savedReview });
   } catch (error) {
     console.log(error);
-    res
-      .status(500)
-      .json({ message: "Internal server error", error: error.message });
+    res.status(500).json({ message: error.message });
   }
 };
 
@@ -111,9 +109,7 @@ exports.getAllReviews = async (req, res) => {
     });
   } catch (error) {
     console.log(error);
-    res
-      .status(500)
-      .json({ message: "Internal server error", error: error.message });
+    res.status(500).json({ message: error.message });
   }
 };
 
@@ -138,9 +134,7 @@ exports.getReviewById = async (req, res) => {
     res.status(200).json({ message: "Review fetched successfully.", review });
   } catch (error) {
     console.log(error);
-    res
-      .status(500)
-      .json({ message: "Internal server error", error: error.message });
+    res.status(500).json({ message: error.message });
   }
 };
 
@@ -172,9 +166,7 @@ exports.updateReviewById = async (req, res) => {
       .json({ message: "Review updated successfully.", review: updatedReview });
   } catch (error) {
     console.log(error);
-    res
-      .status(500)
-      .json({ message: "Internal server error", error: error.message });
+    res.status(500).json({ message: error.message });
   }
 };
 
@@ -207,8 +199,6 @@ exports.deleteReviewById = async (req, res) => {
       .json({ message: "Review deleted successfully.", review: deletedReview });
   } catch (error) {
     console.log(error);
-    res
-      .status(500)
-      .json({ message: "Internal server error", error: error.message });
+    res.status(500).json({ message: error.message });
   }
 };
