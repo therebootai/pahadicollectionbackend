@@ -103,7 +103,7 @@ exports.getAllComponents = async (req, res) => {
     });
   } catch (error) {
     console.error("Error getting Component details:", error);
-    res.status(500).json({ success: false, message: error.message });
+    res.status(500).json({ message: error.message });
   }
 };
 
@@ -126,7 +126,7 @@ exports.getComponentDropdown = async (req, res) => {
     res.status(200).json(items);
   } catch (error) {
     console.error("Error getting Component dropdown:", error);
-    res.status(500).json({ success: false, message: error.message });
+    res.status(500).json({ message: error.message });
   }
 };
 
@@ -147,7 +147,7 @@ exports.getSingleComponent = async (req, res) => {
     res.status(200).json(component);
   } catch (error) {
     console.error("Error getting Component details:", error);
-    res.status(500).json({ success: false, message: error.message });
+    res.status(500).json({ message: error.message });
   }
 };
 
@@ -195,7 +195,7 @@ exports.updateComponent = async (req, res) => {
     });
   } catch (error) {
     console.error("Error updating Component dropdown:", error);
-    res.status(500).json({ success: false, message: error.message });
+    res.status(500).json({ message: error.message });
   }
 };
 
@@ -223,6 +223,6 @@ exports.deleteComponent = async (req, res) => {
       .json({ success: true, message: "Component deleted successfully" });
   } catch (error) {
     console.error("Error deleting Component:", error);
-    res.status(500).json({ success: false, message: error.message });
+    res.status(500).json({ message: error.message });
   }
 };

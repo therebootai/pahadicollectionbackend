@@ -20,8 +20,7 @@ exports.createPickups = async (req, res) => {
           ? "Mobile number already exists."
           : `${field} must be unique. The value '${error.keyValue[field]}' already exists.`;
       return res.status(400).json({
-        message: "Validation Error",
-        error: message,
+        message,
       });
     }
     console.error("Error creating Pickups details:", error);

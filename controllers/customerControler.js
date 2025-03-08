@@ -67,19 +67,15 @@ exports.registerNewCustomer = async (req, res) => {
     return res.status(201).json({
       message: "Customer registered successfully.",
       customer: savedCustomer._doc,
-      token,
     });
   } catch (error) {
     console.error("Error creating new Customer details:", error);
     if (error.code === 11000) {
       return res.status(400).json({
-        error: "Customer already exists.",
+        message: "Customer already exists.",
       });
     }
-    return res.status(500).json({
-      message: "Internal Server Error",
-      error: error.message,
-    });
+    return res.status(500).json({ message: error.message });
   }
 };
 
@@ -128,9 +124,7 @@ exports.getAllCustomers = async (req, res) => {
     });
   } catch (error) {
     console.error("Error getting customers:", error);
-    return res
-      .status(500)
-      .json({ message: "Internal Server Error", error: error.message });
+    return res.status(500).json({ message: error.message });
   }
 };
 
@@ -179,10 +173,7 @@ exports.searchCustomers = async (req, res) => {
     });
   } catch (error) {
     console.error("Error searching customers:", error);
-    return res.status(500).json({
-      message: "Internal Server Error",
-      error: error.message,
-    });
+    return res.status(500).json({ message: error.message });
   }
 };
 
@@ -212,9 +203,7 @@ exports.getCustomerById = async (req, res) => {
       .json({ message: "Customer fetched successfully", customer });
   } catch (error) {
     console.log("Error getting customer details:", error);
-    res
-      .status(500)
-      .json({ message: "Internal Server Error", error: error.message });
+    res.status(500).json({ message: error.message });
   }
 };
 
@@ -240,7 +229,7 @@ exports.deleteCustomerById = async (req, res) => {
       .json({ message: "Customer Data Delete Successfully", success: true });
   } catch (error) {
     console.log("Error deleting customer:", error);
-    res.status(500).json({ message: "Internal Server Error", error: error });
+    res.status(500).json({ message: error.message });
   }
 };
 
@@ -350,7 +339,7 @@ exports.updateCustomerById = async (req, res) => {
     });
   } catch (error) {
     console.log("Error updateing customer:", error);
-    res.status(500).json({ message: "Internal Server Error", error: error });
+    res.status(500).json({ message: error.message });
   }
 };
 
@@ -416,10 +405,7 @@ exports.getAllWishlist = async (req, res) => {
     });
   } catch (error) {
     console.error("Error getting wishlist details:", error);
-    return res.status(500).json({
-      message: "Internal Server Error",
-      error: error.message,
-    });
+    return res.status(500).json({ message: error.message });
   }
 };
 
@@ -513,10 +499,7 @@ exports.getAllCart = async (req, res) => {
     res.status(200).json({ cart: allCartsItems });
   } catch (error) {
     console.error("Error getting carts details:", error);
-    return res.status(500).json({
-      message: "Internal Server Error",
-      error: error.message,
-    });
+    return res.status(500).json({ message: error.message });
   }
 };
 
@@ -622,13 +605,14 @@ exports.loginCustomer = async (req, res) => {
     res.status(200).json({ message: "Login successful", customer });
   } catch (error) {
     console.log("Error logging in customer:", error);
-    res.status(500).json({ message: "Internal Server Error", error: error });
+    res.status(500).json({ message: error.message });
   }
 };
 
 exports.logoutCustomer = async (req, res) => {
   try {
     const { user } = req;
+
     await customerModel.findByIdAndUpdate(
       user._id,
       { $set: { isLogin: false } },
@@ -642,7 +626,7 @@ exports.logoutCustomer = async (req, res) => {
     res.status(200).json({ message: "Logout successful" });
   } catch (error) {
     console.error("Error logging out customer:", error);
-    res.status(500).json({ message: "Internal Server Error" });
+    res.status(500).json({ message: error.message });
   }
 };
 
@@ -669,6 +653,6 @@ exports.checkAuthorization = async (req, res) => {
     res.status(200).json({ message: "Authorized", user: loggedUser });
   } catch (error) {
     console.error("Error checking Authorization user:", error);
-    res.status(500).json({ message: "Internal Server Error" });
+    res.status(500).json({ message: error.message });
   }
 };
