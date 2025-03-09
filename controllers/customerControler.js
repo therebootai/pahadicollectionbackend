@@ -331,11 +331,11 @@ exports.updateCustomerById = async (req, res) => {
     }
 
     // Save customer to trigger pre-save hook for password hashing
-    await customer.save();
+    const savedCustomer = await customer.save();
 
     return res.status(200).json({
       message: "Customer updated successfully.",
-      customer,
+      customer: savedCustomer,
     });
   } catch (error) {
     console.log("Error updateing customer:", error);
