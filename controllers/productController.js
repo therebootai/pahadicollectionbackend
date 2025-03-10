@@ -3,6 +3,7 @@ const { uploadFile, deleteFile } = require("../middlewares/cloudinary");
 const generateCustomId = require("../middlewares/ganerateCustomId");
 const productModel = require("../models/productModel");
 const attributeModel = require("../models/attributeModel");
+const Categories = require("../models/catgoryModel");
 
 exports.createProduct = async (req, res) => {
   try {
@@ -180,7 +181,7 @@ exports.getAllProducts = async (req, res) => {
   try {
     const {
       page = 1, // default page 1
-      limit = 10, // default limit to 10
+      limit = 12, // default limit to 10
       sortBy = "createdAt", // default sorting by createdAt
       order = "desc", // default descending order
       productType, // filter by productType
@@ -209,10 +210,6 @@ exports.getAllProducts = async (req, res) => {
       query.in_stock = { $gte: in_stock }; // Ensure in-stock is at least the value provided
     }
 
-    if (category) {
-      query.category = { $in: category.split(",") }; // Allow multiple categories, comma-separated
-    }
-
     if (tags) {
       query.tags = { $in: tags.split(",") }; // Allow multiple tags, comma-separated
     }
@@ -223,6 +220,17 @@ exports.getAllProducts = async (req, res) => {
 
     if (isActive !== undefined) {
       query.isActive = isActive === "true" ? true : false;
+    }
+
+    if (category) {
+      const categoryDoc = await Categories.findOne({
+        mainCategory: category.trim(),
+      });
+      if (categoryDoc) {
+        query.category = categoryDoc._id;
+      } else {
+        query.category = null;
+      }
     }
 
     // Pagination setup
@@ -569,6 +577,32 @@ exports.getProductById = async (req, res) => {
           { _id: mongoose.Types.ObjectId.isValid(id) ? id : undefined },
           { productId: id },
         ],
+      })
+      .populate("category")
+      .populate("pickup")
+      .populate("main_product")
+      .populate("variant")
+      .populate("variable.variableId")
+      .populate("attribute")
+      .populate("reviews");
+    if (!product) {
+      return res.status(404).json({ message: "Product not found" });
+    }
+    res
+      .status(200)
+      .json({ message: "Product fetched successfully", data: product });
+  } catch (error) {
+    console.error("Error getting Product details:", error);
+    return res.status(500).json({ message: error.message });
+  }
+};
+
+exports.getProductBySlug = async (req, res) => {
+  try {
+    const { slug } = req.params;
+    const product = await productModel
+      .findOne({
+        slug,
       })
       .populate("category")
       .populate("pickup")

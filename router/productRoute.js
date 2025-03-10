@@ -6,6 +6,7 @@ const {
   updateProductById,
   getProductById,
   searchProduct,
+  getProductBySlug,
 } = require("../controllers/productController");
 
 const productRouter = express.Router();
@@ -15,6 +16,7 @@ productRouter.post("/create", createProduct);
 productRouter.get("/", getAllProducts);
 
 productRouter.get("/find", searchProduct);
+productRouter.get("/:slug", getProductBySlug);
 
 productRouter
   .route("/:id")
