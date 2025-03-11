@@ -693,13 +693,15 @@ exports.checkAuthorization = async (req, res) => {
       return res.status(401).json({ message: "invailid" });
     }
     const loggedUser = await customerModel
-      .findById(user._id)
+      .findById(user)
       .populate("cart.productId")
       .populate("orders")
       .populate("wishlist")
       .populate("payments")
       .populate("used_coupon")
       .populate("reviewed");
+
+    console.log(loggedUser);
 
     if (!loggedUser) {
       return res.status(404).json({ message: "User not found" });
