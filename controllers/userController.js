@@ -132,7 +132,7 @@ exports.loginUser = async (req, res) => {
         .json({ message: "No user found or Invalid credential" });
     }
 
-    const token = generateToken({ ...user });
+    const token = generateToken({ user: user._id });
     res.cookie("token", token, {
       httpOnly: true,
       sameSite: "none",
@@ -166,7 +166,7 @@ exports.checkAuthorization = async (req, res) => {
     if (!user) {
       return res.status(401).json({ message: "Unauthorized" });
     }
-    const loggedUser = await Users.findById(user._id);
+    const loggedUser = await Users.findById(user);
     if (!loggedUser) {
       return res.status(401).json({ message: "User not found" });
     }
