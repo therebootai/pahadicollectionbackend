@@ -16,7 +16,7 @@ productRouter.post("/create", createProduct);
 productRouter.get("/", getAllProducts);
 
 productRouter.get("/find", searchProduct);
-productRouter.get("/:slug", getProductBySlug);
+productRouter.get("/slug/:slug", getProductBySlug);
 
 productRouter
   .route("/:id")

@@ -180,15 +180,16 @@ exports.createProduct = async (req, res) => {
 exports.getAllProducts = async (req, res) => {
   try {
     const {
-      page = 1, // default page 1
-      limit = 12, // default limit to 10
-      sortBy = "createdAt", // default sorting by createdAt
-      order = "desc", // default descending order
-      productType, // filter by productType
-      priceMin, // filter by min price
-      priceMax, // filter by max price
-      category, // filter by category
-      in_stock, // filter by stock
+      page = 1,
+      limit = 12,
+      sortBy = "createdAt",
+      order = "desc",
+      productType,
+      priceMin,
+      priceMax,
+      category,
+      attribute,
+      in_stock,
       tags,
       is_drafted,
       isActive,
@@ -207,11 +208,11 @@ exports.getAllProducts = async (req, res) => {
     }
 
     if (in_stock) {
-      query.in_stock = { $gte: in_stock }; // Ensure in-stock is at least the value provided
+      query.in_stock = { $gte: in_stock };
     }
 
     if (tags) {
-      query.tags = { $in: tags.split(",") }; // Allow multiple tags, comma-separated
+      query.tags = { $in: tags.split(",") };
     }
 
     if (is_drafted !== undefined) {
@@ -230,6 +231,18 @@ exports.getAllProducts = async (req, res) => {
         query.category = categoryDoc._id;
       } else {
         query.category = null;
+      }
+    }
+    if (attribute) {
+      const attributeArray = decodeURIComponent(attribute)
+        .split(",")
+        .map((attr) => attr.trim());
+      const attributeDocs = await attributeModel.find({
+        attribute_title: { $in: attributeArray },
+      });
+
+      if (attributeDocs.length > 0) {
+        query.attribute = { $in: attributeDocs.map((attr) => attr._id) };
       }
     }
 
@@ -571,6 +584,7 @@ exports.updateProductById = async (req, res) => {
 exports.getProductById = async (req, res) => {
   try {
     const { id } = req.params;
+
     const product = await productModel
       .findOne({
         $or: [
