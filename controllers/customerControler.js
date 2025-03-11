@@ -701,8 +701,6 @@ exports.checkAuthorization = async (req, res) => {
       .populate("used_coupon")
       .populate("reviewed");
 
-    console.log(loggedUser);
-
     if (!loggedUser) {
       return res.status(404).json({ message: "User not found" });
     }
