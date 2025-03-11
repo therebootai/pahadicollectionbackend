@@ -1,6 +1,7 @@
 const generateCustomId = require("../middlewares/ganerateCustomId");
 const couponModel = require("../models/couponModel");
 const mongoose = require("mongoose");
+const customerModel = require("../models/customerModel");
 
 exports.createNewCoupon = async (req, res) => {
   try {
@@ -264,6 +265,30 @@ exports.deleteCouponById = async (req, res) => {
       .json({ message: "Coupon deleted successfully", success: true });
   } catch (error) {
     console.error("Error deleting coupon by ID:", error);
+    res.status(500).json({ message: error.message });
+  }
+};
+
+exports.getCouponByName = async (req, res) => {
+  try {
+    const { coupon_code } = req.params;
+    const coupon = await couponModel.findOne({ couponName: coupon_code });
+
+    if (!coupon) {
+      return res.status(404).json({ message: "Coupon not found" });
+    }
+
+    if (coupon.endDate < Date.now()) {
+      return res.status(400).json({ message: "Coupon has expired" });
+    }
+
+    if (coupon.usedBy.includes(req.user._id)) {
+      return res.status(400).json({ message: "Coupon already used" });
+    }
+
+    res.status(200).json({ message: "Coupon fetched successfully", coupon });
+  } catch (error) {
+    console.error("Error using a coupon:", error);
     res.status(500).json({ message: error.message });
   }
 };
