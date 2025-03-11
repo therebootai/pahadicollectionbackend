@@ -687,7 +687,6 @@ exports.logoutCustomer = async (req, res) => {
 exports.checkAuthorization = async (req, res) => {
   try {
     const { user } = req;
-    console.log(user);
 
     if (!user) {
       return res.status(401).json({ message: "invailid" });
@@ -700,8 +699,6 @@ exports.checkAuthorization = async (req, res) => {
       .populate("payments")
       .populate("used_coupon")
       .populate("reviewed");
-
-    console.log(loggedUser);
 
     if (!loggedUser) {
       return res.status(404).json({ message: "User not found" });
