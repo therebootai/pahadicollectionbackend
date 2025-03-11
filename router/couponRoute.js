@@ -6,7 +6,9 @@ const {
   deleteCouponById,
   getCouponById,
   updateCouponById,
+  getCouponByName,
 } = require("../controllers/couponController");
+const { authenticateUser } = require("../middlewares/jsonToken");
 
 const couponRouter = express.Router();
 
@@ -15,6 +17,8 @@ couponRouter.post("/", createNewCoupon);
 couponRouter.get("/", getAllCoupons);
 
 couponRouter.get("/search", searchCoupons);
+
+couponRouter.get("/use/:coupon_code", authenticateUser, getCouponByName);
 
 couponRouter
   .route("/:id")
