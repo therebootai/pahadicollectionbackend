@@ -36,13 +36,24 @@ const customerSchema = new mongoose.Schema(
       public_id: { type: String },
     },
     address: [{ type: Object, required: true }],
-    cart: [
-      {
-        type: mongoose.Schema.Types.ObjectId,
-        ref: "Products",
-        default: [],
-      },
-    ],
+    cart: {
+      type: [
+        {
+          productId: {
+            type: mongoose.Schema.Types.ObjectId,
+            ref: "Products",
+            required: true,
+          },
+          quantity: {
+            type: Number,
+            required: true,
+            min: 1,
+            default: 1,
+          },
+        },
+      ],
+      default: [],
+    },
     orders: [
       {
         type: mongoose.Schema.Types.ObjectId,

@@ -4,6 +4,7 @@ const orderModel = require("../models/orderModel");
 const paymentModel = require("../models/paymentModel");
 const generateCustomId = require("../middlewares/ganerateCustomId");
 const customerModel = require("../models/customerModel");
+const couponModel = require("../models/couponModel");
 
 exports.createNewOrder = async (req, res) => {
   try {
@@ -16,6 +17,10 @@ exports.createNewOrder = async (req, res) => {
       paymentStatus,
       paymentMode,
     } = req.body;
+
+    if (!customerId || !products || !totalAmount) {
+      return res.status(400).json({ message: "All fields are required." });
+    }
 
     const orderId = await generateCustomId(orderModel, "orderId", "orderId");
 
@@ -47,20 +52,34 @@ exports.createNewOrder = async (req, res) => {
 
     const savedPayment = await newPayment.save();
 
-    const [customerUpdate, updatedOrder] = await Promise.all([
-      customerModel.findByIdAndUpdate(
+    let allPromises = [
+      await customerModel.findByIdAndUpdate(
         customerId,
         {
           $push: { orders: savedOrder._id, payments: savedPayment._id },
         },
         { new: true }
       ),
-      orderModel.findByIdAndUpdate(
+      await orderModel.findByIdAndUpdate(
         savedOrder._id,
         { paymentId: savedPayment._id },
         { new: true }
       ),
-    ]);
+    ];
+
+    if (couponId && couponId !== "") {
+      allPromises.push(
+        await couponModel.findByIdAndUpdate(
+          couponId,
+          {
+            $push: { usedBy: customerId },
+          },
+          { new: true }
+        )
+      );
+    }
+
+    const [customerUpdate, updatedOrder] = await Promise.all(allPromises);
 
     res.status(200).json({
       message: "Order created successfully",

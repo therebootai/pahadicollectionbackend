@@ -106,7 +106,7 @@ exports.getAllCustomers = async (req, res) => {
       .skip(skip)
       .limit(parseInt(limit))
       .sort({ [sortBy]: sortOrder })
-      .populate("cart")
+      .populate("cart.productId")
       .populate("orders")
       .populate("wishlist")
       .populate("payments")
@@ -155,7 +155,7 @@ exports.searchCustomers = async (req, res) => {
       .find(query)
       .skip(skip)
       .limit(parseInt(limit))
-      .populate("cart")
+      .populate("cart.productId")
       .populate("orders")
       .populate("wishlist")
       .populate("payments")
@@ -188,7 +188,7 @@ exports.getCustomerById = async (req, res) => {
           { _id: mongoose.Types.ObjectId.isValid(id) ? id : undefined },
         ],
       })
-      .populate("cart")
+      .populate("cart.productId")
       .populate("orders")
       .populate("wishlist")
       .populate("payments")
@@ -481,7 +481,7 @@ exports.getAllCart = async (req, res) => {
     const customers = await customerModel
       .find()
       .populate({
-        path: "cart",
+        path: "cart.productId",
         match: {
           ...(minPrice && { price: { $gte: minPrice } }),
           ...(maxPrice && { price: { $lte: maxPrice } }),
@@ -505,7 +505,9 @@ exports.getAllCart = async (req, res) => {
 
 exports.addToCart = async (req, res) => {
   try {
-    const { customerId, productId } = req.body;
+    const { customerId, productId, quantity = 1 } = req.body; // Default quantity to 1 if not provided
+
+    // Find the customer using either customerId or _id
     const customer = await customerModel.findOne({
       $or: [
         { customerId: customerId },
@@ -516,13 +518,27 @@ exports.addToCart = async (req, res) => {
         },
       ],
     });
+
     if (!customer) {
       return res.status(404).json({ message: "Customer not found" });
     }
-    if (!customer.cart.includes(productId)) {
-      customer.cart.push(productId);
-      await customer.save();
+
+    // Check if the product already exists in the cart
+    const existingCartItem = customer.cart.find(
+      (item) => item.productId.toString() === productId
+    );
+
+    if (existingCartItem) {
+      // If the product already exists, update its quantity
+      existingCartItem.quantity += quantity;
+    } else {
+      // If the product doesn't exist, add a new item to the cart
+      customer.cart.push({ productId, quantity });
     }
+
+    await customer.save();
+
+    // Populate cart with product details
     const updatedCustomer = await customerModel
       .findOne({
         $or: [
@@ -534,10 +550,11 @@ exports.addToCart = async (req, res) => {
           },
         ],
       })
-      .populate("cart");
+      .populate("cart.productId");
+
     res.status(200).json({
-      message: "Product added to wishlist",
-      wishlist: updatedCustomer.cart,
+      message: "Product added to cart",
+      cart: updatedCustomer.cart,
     });
   } catch (error) {
     res.status(500).json({ message: "Server error", error: error.message });
@@ -546,20 +563,57 @@ exports.addToCart = async (req, res) => {
 
 exports.removeFromCart = async (req, res) => {
   try {
-    const { customerId, productId } = req.body;
-    const customer = await customerModel
-      .findOne({ customerId })
-      .populate("cart");
+    const { customerId, productId, quantity = 1 } = req.body;
+
+    const customer = await customerModel.findOne({
+      $or: [
+        { customerId: customerId },
+        {
+          _id: mongoose.Types.ObjectId.isValid(customerId)
+            ? customerId
+            : undefined,
+        },
+      ],
+    });
+
     if (!customer) {
       return res.status(404).json({ message: "Customer not found" });
     }
-    customer.cart = customer.cart.filter(
-      (product) => product._id.toString() !== productId
+
+    const cartItemIndex = customer.cart.findIndex(
+      (item) => item.productId.toString() === productId
     );
+
+    if (cartItemIndex === -1) {
+      return res.status(404).json({ message: "Product not found in cart" });
+    }
+
+    // If quantity > 1, decrease the quantity
+    if (customer.cart[cartItemIndex].quantity > quantity) {
+      customer.cart[cartItemIndex].quantity -= quantity;
+    } else {
+      // If quantity <= requested removal quantity, remove the product
+      customer.cart.splice(cartItemIndex, 1);
+    }
+
     await customer.save();
+
+    const updatedCustomer = await customerModel
+      .findOne({
+        $or: [
+          { customerId: customerId },
+          {
+            _id: mongoose.Types.ObjectId.isValid(customerId)
+              ? customerId
+              : undefined,
+          },
+        ],
+      })
+      .populate("cart.productId");
+
     res.status(200).json({
       message: "Product removed from cart",
-      cart: customer.cart,
+      cart: updatedCustomer.cart,
     });
   } catch (error) {
     console.error("Error removing product from cart:", error);
@@ -581,7 +635,7 @@ exports.loginCustomer = async (req, res) => {
         { $set: { isLogin: true } },
         { new: true, runValidators: true }
       )
-      .populate("cart")
+      .populate("cart.productId")
       .populate("orders")
       .populate("wishlist")
       .populate("payments")
@@ -639,8 +693,8 @@ exports.checkAuthorization = async (req, res) => {
       return res.status(401).json({ message: "invailid" });
     }
     const loggedUser = await customerModel
-      .findById(user)
-      .populate("cart")
+      .findById(user._id)
+      .populate("cart.productId")
       .populate("orders")
       .populate("wishlist")
       .populate("payments")
