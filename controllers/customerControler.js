@@ -55,7 +55,7 @@ exports.registerNewCustomer = async (req, res) => {
 
     const savedCustomer = await newCustomer.save();
 
-    const token = generateToken({ ...savedCustomer._doc });
+    const token = generateToken({ user: savedCustomer._doc._id });
 
     res.cookie("token", token, {
       httpOnly: true, // Prevent JavaScript access
@@ -595,12 +595,12 @@ exports.loginCustomer = async (req, res) => {
     if (!(await customer.matchPassword(password))) {
       return res.status(401).json({ message: "Incorrect password" });
     }
-    const token = generateToken({ ...customer });
+    const token = generateToken({ user: customer._id });
     res.cookie("token", token, {
-      httpOnly: true, // Prevent JavaScript access
-      sameSite: "none", // CSRF protection
+      httpOnly: true,
+      sameSite: "none",
       secure: true,
-      maxAge: 30 * 24 * 60 * 60 * 1000, // 30 days
+      maxAge: 30 * 24 * 60 * 60 * 1000,
     });
     res.status(200).json({ message: "Login successful", customer });
   } catch (error) {
@@ -633,12 +633,13 @@ exports.logoutCustomer = async (req, res) => {
 exports.checkAuthorization = async (req, res) => {
   try {
     const { user } = req;
+    console.log(user);
 
     if (!user) {
-      return res.status(401).json({ message: "Unauthorized" });
+      return res.status(401).json({ message: "invailid" });
     }
     const loggedUser = await customerModel
-      .findById(user._id)
+      .findById(user)
       .populate("cart")
       .populate("orders")
       .populate("wishlist")
@@ -647,7 +648,7 @@ exports.checkAuthorization = async (req, res) => {
       .populate("reviewed");
 
     if (!loggedUser) {
-      return res.status(401).json({ message: "User not found" });
+      return res.status(404).json({ message: "User not found" });
     }
 
     res.status(200).json({ message: "Authorized", user: loggedUser });
