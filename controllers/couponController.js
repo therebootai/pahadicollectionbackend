@@ -81,12 +81,12 @@ exports.getAllCoupons = async (req, res) => {
 
     // Filter by date range
     if (startDate && endDate) {
-      query.startDate = { $gte: new Date(startDate) };
-      query.endDate = { $lte: new Date(endDate) };
+      query.startDate = { $lte: new Date(startDate) };
+      query.endDate = { $gte: new Date(endDate) };
     } else if (startDate) {
-      query.startDate = { $gte: new Date(startDate) };
+      query.startDate = { $lte: new Date(startDate) };
     } else if (endDate) {
-      query.endDate = { $lte: new Date(endDate) };
+      query.endDate = { $gte: new Date(endDate) };
     }
 
     // Filter by specific product
