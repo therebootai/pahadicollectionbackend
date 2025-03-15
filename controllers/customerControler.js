@@ -14,7 +14,7 @@ exports.registerNewCustomer = async (req, res) => {
       profileImage = req.files?.profileImage[0];
     }
 
-    if (!name || !email || !mobile || !address || !password) {
+    if (!name || !email || !mobile || !password) {
       return res.status(400).json({ message: "All fields are required." });
     }
 
