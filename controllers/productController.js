@@ -640,7 +640,15 @@ exports.getProductBySlug = async (req, res) => {
 
 exports.searchProduct = async (req, res) => {
   try {
-    const { search = "", page = 1, limit = 10, productType } = req.query;
+    const {
+      search = "",
+      page = 1,
+      limit = 10,
+      productType,
+      sortBy = "createdAt",
+      order = "desc",
+      is_drafted = false,
+    } = req.query;
     currentPage = parseInt(page);
     currentLimit = parseInt(limit);
 
@@ -655,10 +663,16 @@ exports.searchProduct = async (req, res) => {
       query.productType = productType;
     }
 
+    if (is_drafted) {
+      query.is_drafted = is_drafted === "true" ? true : false;
+    }
+
+    const sortOrder = order === "asc" ? 1 : -1;
+
     const [products, totalProducts] = await Promise.all([
       productModel
         .find(query)
-        .sort({ createdAt: -1 })
+        .sort({ [sortBy]: sortOrder })
         .skip((currentPage - 1) * currentLimit)
         .limit(currentLimit)
         .populate("category")
@@ -674,8 +688,8 @@ exports.searchProduct = async (req, res) => {
     const totalPages = Math.ceil(totalProducts / currentLimit);
     res.status(200).json({
       message: "Products fetched successfully",
-      data: products,
-      meta: {
+      products,
+      pagination: {
         totalCount: totalProducts,
         totalPages,
         currentPage: parseInt(page),
