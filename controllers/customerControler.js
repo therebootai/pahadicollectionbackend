@@ -14,7 +14,7 @@ exports.registerNewCustomer = async (req, res) => {
       profileImage = req.files?.profileImage[0];
     }
 
-    if (!name || !email || !mobile || !address || !password) {
+    if (!name || !email || !mobile || !password) {
       return res.status(400).json({ message: "All fields are required." });
     }
 
@@ -369,7 +369,9 @@ exports.getAllWishlist = async (req, res) => {
       ];
     }
 
-    // Find all customers and populate the wishlist
+    console.log(query);
+
+    // Find customers and populate wishlist with filtering conditions
     const customers = await customerModel
       .find(query)
       .populate({
@@ -383,10 +385,18 @@ exports.getAllWishlist = async (req, res) => {
       })
       .exec();
 
-    // Extract wishlist items from all customers
-    const allWishlistItems = customers
-      .flatMap((customer) => customer.wishlist)
-      .filter(Boolean);
+    // Map wishlist items with their respective customer details
+    const allWishlistItems = customers.flatMap((customer) =>
+      customer.wishlist.map((wishlistItem) => ({
+        ...wishlistItem.toObject(), // Convert Mongoose document to plain object
+        customer: {
+          _id: customer._id,
+          name: customer.name,
+          email: customer.email,
+          mobile: customer.mobile,
+        },
+      }))
+    );
 
     const totalCount = allWishlistItems.length;
     const totalPages = Math.ceil(totalCount / limitNumber);
