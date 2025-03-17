@@ -56,7 +56,11 @@ exports.createNewOrder = async (req, res) => {
       await customerModel.findByIdAndUpdate(
         customerId,
         {
-          $push: { orders: savedOrder._id, payments: savedPayment._id },
+          $push: {
+            orders: savedOrder._id,
+            payments: savedPayment._id,
+            used_coupon: couponId,
+          },
         },
         { new: true }
       ),
