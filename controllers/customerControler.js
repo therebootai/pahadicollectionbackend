@@ -369,8 +369,6 @@ exports.getAllWishlist = async (req, res) => {
       ];
     }
 
-    console.log(query);
-
     // Find customers and populate wishlist with filtering conditions
     const customers = await customerModel
       .find(query)
