@@ -141,18 +141,18 @@ exports.getAllOrders = async (req, res) => {
 
 exports.searchOrders = async (req, res) => {
   try {
-    let { query, page = 1, limit = 10 } = req.query;
+    let { search, page = 1, limit = 10 } = req.query;
     page = parseInt(page);
     limit = parseInt(limit);
 
-    if (!query) {
+    if (!search) {
       return res
         .status(400)
         .json({ success: false, message: "Search query is required." });
     }
 
     const searchFilter = {
-      $or: [{ orderId: { $regex: query, $options: "i" } }],
+      $or: [{ orderId: { $regex: search, $options: "i" } }],
     };
 
     const orders = await orderModel
