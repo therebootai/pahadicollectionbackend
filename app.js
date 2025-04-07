@@ -39,6 +39,8 @@ app.use(
       "https://pahadi-collection-admin-panel.netlify.app",
       "https://pahadicollectionwebsite.vercel.app",
       "http://192.168.29.162:3000",
+      "http://pahadicollections.com",
+      "http://server.pahadicollections.com",
     ],
     credentials: true,
   })
