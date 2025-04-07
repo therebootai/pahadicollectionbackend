@@ -23,7 +23,7 @@ customerRouter.post("/", registerNewCustomer);
 
 customerRouter.get("/", getAllCustomers);
 
-customerRouter.get("/search", searchCustomers);
+customerRouter.get("/find", searchCustomers);
 
 customerRouter.get("/wishlist", getAllWishlist);
 
