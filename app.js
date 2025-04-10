@@ -40,7 +40,7 @@ app.use(
       "https://pahadicollectionwebsite.vercel.app",
       "http://192.168.29.162:3000",
       "http://pahadicollections.com",
-      "http://server.pahadicollections.com",
+      "http://reboot.pahadicollections.com",
     ],
     credentials: true,
   })
