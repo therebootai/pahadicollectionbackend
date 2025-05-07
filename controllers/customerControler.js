@@ -6,7 +6,7 @@ const customerModel = require("../models/customerModel");
 
 exports.registerNewCustomer = async (req, res) => {
   try {
-    const { name, email, mobile, address, password } = req.body;
+    const { name, email, mobile, password } = req.body;
 
     let profileImage = null;
 
@@ -43,7 +43,7 @@ exports.registerNewCustomer = async (req, res) => {
       name,
       email,
       mobile,
-      address,
+      address: [],
       password,
       profileImage: profileImageResult
         ? {
@@ -368,8 +368,6 @@ exports.getAllWishlist = async (req, res) => {
         },
       ];
     }
-
-    console.log(query);
 
     // Find customers and populate wishlist with filtering conditions
     const customers = await customerModel

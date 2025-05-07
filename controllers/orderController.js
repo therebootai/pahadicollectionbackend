@@ -56,7 +56,11 @@ exports.createNewOrder = async (req, res) => {
       await customerModel.findByIdAndUpdate(
         customerId,
         {
-          $push: { orders: savedOrder._id, payments: savedPayment._id },
+          $push: {
+            orders: savedOrder._id,
+            payments: savedPayment._id,
+            used_coupon: couponId,
+          },
         },
         { new: true }
       ),
@@ -137,18 +141,18 @@ exports.getAllOrders = async (req, res) => {
 
 exports.searchOrders = async (req, res) => {
   try {
-    let { query, page = 1, limit = 10 } = req.query;
+    let { search, page = 1, limit = 10 } = req.query;
     page = parseInt(page);
     limit = parseInt(limit);
 
-    if (!query) {
+    if (!search) {
       return res
         .status(400)
         .json({ success: false, message: "Search query is required." });
     }
 
     const searchFilter = {
-      $or: [{ orderId: { $regex: query, $options: "i" } }],
+      $or: [{ orderId: { $regex: search, $options: "i" } }],
     };
 
     const orders = await orderModel

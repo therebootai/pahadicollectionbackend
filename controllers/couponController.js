@@ -278,11 +278,19 @@ exports.getCouponByName = async (req, res) => {
       return res.status(404).json({ message: "Coupon not found" });
     }
 
-    if (coupon.endDate < Date.now()) {
+    const now = new Date();
+    const startDate = new Date(coupon.startDate);
+    const endDate = new Date(coupon.endDate);
+
+    if (startDate > now) {
+      return res.status(400).json({ message: "Coupon not yet active" });
+    }
+
+    if (endDate < now) {
       return res.status(400).json({ message: "Coupon has expired" });
     }
 
-    if (coupon.usedBy.includes(req.user._id)) {
+    if (coupon.usedBy.includes(req.user)) {
       return res.status(400).json({ message: "Coupon already used" });
     }
 
