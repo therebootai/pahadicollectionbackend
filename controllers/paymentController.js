@@ -58,6 +58,7 @@ exports.createRazorpayOrder = async (req, res) => {
       amount: amount,
       currency: "INR",
       receipt: `order_rcptid_${Math.floor(Math.random() * 1000000)}`,
+      payment_capture: 1,
     };
 
     const order = await razorpay.orders.create(options);
