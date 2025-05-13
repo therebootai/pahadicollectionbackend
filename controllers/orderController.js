@@ -230,12 +230,12 @@ exports.deleteOrder = async (req, res) => {
 exports.updateOrderDetails = async (req, res) => {
   try {
     const { id } = req.params;
-    const { products, status, delivery_location } = req.body;
+    const { products, status, delivery_location, order_message } = req.body;
     const updatedOrder = await orderModel.findOneAndUpdate(
       {
         $or: [
           { _id: mongoose.Types.ObjectId.isValid(id) ? id : null },
-          { couponId: id },
+          { orderId: id },
         ],
       },
       {
@@ -243,6 +243,7 @@ exports.updateOrderDetails = async (req, res) => {
           ...(products && { products }),
           ...(status && { status }),
           ...(delivery_location && { delivery_location }),
+          ...(order_message && { order_message }),
         },
       },
       { new: true, runValidators: true }
