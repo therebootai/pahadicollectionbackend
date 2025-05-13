@@ -57,6 +57,10 @@ const orderSchema = new mongoose.Schema(
       ref: "Coupons",
       default: null,
     },
+    order_message: {
+      type: String,
+      default: "",
+    },
   },
   { timestamps: true }
 );

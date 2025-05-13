@@ -56,10 +56,9 @@ exports.createRazorpayOrder = async (req, res) => {
   try {
     const { amount, customerId, orderId, paymentMode } = req.body;
 
-    console.log("Request body:", req.body);
 
     const options = {
-      amount: amount * 100,
+      amount: amount,
       currency: "INR",
       receipt: `order_rcptid_${Math.floor(Math.random() * 1000000)}`,
       payment_capture: 1,
@@ -82,7 +81,7 @@ exports.createRazorpayOrder = async (req, res) => {
       signature: "",
       captured: false,
     });
-    console.log("payment Details", payment);
+
     await payment.save();
 
     res.status(200).json({
@@ -105,9 +104,7 @@ exports.handlePaymentSuccess = async (req, res) => {
       paymentId,
     } = req.body;
 
-    console.log("Received paymentId:", paymentId);
-
-    const payment = await paymentModel.findById(paymentId);
+    const payment = await paymentModel.findOne({ paymentId });
     if (!payment) {
       return res.status(400).json({ message: "Payment not found." });
     }
@@ -133,8 +130,8 @@ exports.handlePaymentSuccess = async (req, res) => {
       razorpay_payment_id
     );
     const paymentMethod = razorpayPaymentDetails.method;
-    const updatedPayment = await paymentModel.findByIdAndUpdate(
-      paymentId,
+    const updatedPayment = await paymentModel.findOneAndUpdate(
+      { paymentId },
       {
         razorpayPaymentId: razorpay_payment_id,
         razorpayOrderId: razorpay_order_id,
@@ -145,8 +142,6 @@ exports.handlePaymentSuccess = async (req, res) => {
       },
       { new: true }
     );
-
-    console.log("update payment details", updatedPayment);
 
     if (!updatedPayment) {
       return res.status(400).json({ message: "Payment not found." });
