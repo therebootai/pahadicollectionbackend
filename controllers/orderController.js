@@ -118,10 +118,10 @@ exports.getAllOrders = async (req, res) => {
       .sort({ [sortBy]: order === "desc" ? -1 : 1 })
       .skip((page - 1) * limit)
       .limit(limit)
-      .populate("customerId") // Populate customer details
-      .populate("products.productId") // Populate product details
-      .populate("couponId") // Populate coupon details
-      .populate("paymentId"); // Populate payment details
+      .populate("customerId")
+      .populate("products.productId")
+      .populate("couponId")
+      .populate("paymentId");
 
     const totalOrders = await orderModel.countDocuments(filter);
 
