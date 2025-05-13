@@ -12,29 +12,43 @@ const paymentSchema = new mongoose.Schema(
       ref: "Customers",
       required: true,
     },
+    razorpayPaymentId: {
+      type: String,
+    },
+    razorpayOrderId: {
+      type: String,
+    },
     amount: {
       type: Number,
       required: true,
     },
     paymentStatus: {
       type: String,
-      required: true,
       enum: ["completed", "pending"],
     },
     orderId: {
       type: mongoose.Schema.Types.ObjectId,
       ref: "Orders",
-      required: true,
     },
     paymentMode: {
       type: String,
-      required: true,
       enum: ["COD", "ONLINE"],
     },
     is_refunded: {
       type: Boolean,
-      required: true,
       default: false,
+    },
+    currency: {
+      type: String,
+    },
+    method: {
+      type: String,
+    },
+    signature: {
+      type: String,
+    },
+    captured: {
+      type: Boolean,
     },
   },
   { timestamps: true }
