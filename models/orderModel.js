@@ -57,9 +57,12 @@ const orderSchema = new mongoose.Schema(
       ref: "Coupons",
       default: null,
     },
-    order_message: {
-      type: String,
-      default: "",
+    cancel_message: {
+      type: Object,
+      default: {
+        order_message: "",
+        cancel_reason: "",
+      },
     },
   },
   { timestamps: true }
