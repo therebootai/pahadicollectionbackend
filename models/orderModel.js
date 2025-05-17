@@ -12,19 +12,17 @@ const orderSchema = new mongoose.Schema(
       ref: "Customers",
       required: true,
     },
-    products: [
-      {
-        productId: {
-          type: mongoose.Schema.Types.ObjectId,
-          ref: "Products",
-          required: true,
-        },
-        quantity: {
-          type: Number,
-          required: true,
-        },
+    products: {
+      productId: {
+        type: mongoose.Schema.Types.ObjectId,
+        ref: "Products",
+        required: true,
       },
-    ],
+      quantity: {
+        type: Number,
+        required: true,
+      },
+    },
     paymentId: {
       type: mongoose.Schema.Types.ObjectId,
       ref: "Payments",

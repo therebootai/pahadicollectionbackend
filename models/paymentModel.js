@@ -27,7 +27,7 @@ const paymentSchema = new mongoose.Schema(
       enum: ["completed", "pending"],
     },
     orderId: {
-      type: mongoose.Schema.Types.ObjectId,
+      type: [mongoose.Schema.Types.ObjectId],
       ref: "Orders",
     },
     paymentMode: {
