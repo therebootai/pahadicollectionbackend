@@ -10,7 +10,7 @@ exports.createNewOrder = async (req, res) => {
   try {
     const {
       customerId,
-      products,
+      products, // array of { productId, quantity }
       totalAmount,
       delivery_location,
       couponId,
@@ -22,28 +22,50 @@ exports.createNewOrder = async (req, res) => {
       return res.status(400).json({ message: "All fields are required." });
     }
 
-    const orderId = await generateCustomId(orderModel, "orderId", "orderId");
+    const now = new Date();
+    const pad = (n) => n.toString().padStart(2, "0");
+    const formattedPrefix = `PA-${pad(now.getDate())}-${pad(
+      now.getMonth() + 1
+    )}-${now.getFullYear()}-${pad(now.getHours())}-${pad(
+      now.getMinutes()
+    )}-${pad(now.getSeconds())}`;
 
+    // Step 1: Generate orderIds and create orders
+    const orderPromises = products.map(async (product, index) => {
+      const orderId = await generateCustomId(
+        orderModel,
+        "orderId",
+        `${formattedPrefix}-${index + 1}`
+      );
+
+      const newOrder = new orderModel({
+        orderId,
+        customerId,
+        products: {
+          productId: product.productId,
+          quantity: product.quantity,
+        },
+        totalAmount,
+        delivery_location,
+        couponId,
+      });
+
+      return await newOrder.save();
+    });
+
+    const createdOrders = await Promise.all(orderPromises);
+    const orderIds = createdOrders.map((order) => order._id);
+
+    // Step 2: Create payment
     const paymentId = await generateCustomId(
       paymentModel,
       "paymentId",
       "paymentId"
     );
 
-    const newOrder = new orderModel({
-      orderId,
-      customerId,
-      products,
-      totalAmount,
-      delivery_location,
-      couponId,
-    });
-
-    const savedOrder = await newOrder.save();
-
     const newPayment = new paymentModel({
       paymentId,
-      orderId: newOrder._id,
+      orderId: orderIds, // array of ObjectIds
       customerId,
       amount: totalAmount,
       paymentStatus,
@@ -52,45 +74,48 @@ exports.createNewOrder = async (req, res) => {
 
     const savedPayment = await newPayment.save();
 
-    let allPromises = [
-      await customerModel.findByIdAndUpdate(
-        customerId,
-        {
-          $push: {
-            orders: savedOrder._id,
-            payments: savedPayment._id,
-            used_coupon: couponId,
-          },
+    // Step 3: Parallel updates
+    const updateCustomerPromise = customerModel.findByIdAndUpdate(
+      customerId,
+      {
+        $push: {
+          orders: { $each: orderIds },
+          payments: savedPayment._id,
+          ...(couponId ? { used_coupon: couponId } : {}),
         },
-        { new: true }
-      ),
-      await orderModel.findByIdAndUpdate(
-        savedOrder._id,
-        { paymentId: savedPayment._id },
-        { new: true }
-      ),
-    ];
+      },
+      { new: true }
+    );
 
-    if (couponId && couponId !== "") {
-      allPromises.push(
-        await couponModel.findByIdAndUpdate(
-          couponId,
-          {
-            $push: { usedBy: customerId },
-          },
-          { new: true }
-        )
-      );
-    }
+    const updateOrdersPromise = orderModel.updateMany(
+      { _id: { $in: orderIds } },
+      { $set: { paymentId: savedPayment._id } }
+    );
 
-    const [customerUpdate, updatedOrder] = await Promise.all(allPromises);
+    const couponUpdatePromise =
+      couponId && couponId !== ""
+        ? couponModel.findByIdAndUpdate(
+            couponId,
+            { $push: { usedBy: customerId } },
+            { new: true }
+          )
+        : Promise.resolve(null); // dummy promise if no coupon
+
+    await Promise.all([
+      updateCustomerPromise,
+      updateOrdersPromise,
+      couponUpdatePromise,
+    ]);
 
     res.status(200).json({
-      message: "Order created successfully",
-      data: { order: updatedOrder, payment: savedPayment },
+      message: "Orders and payment created successfully",
+      data: {
+        orders: createdOrders,
+        payment: savedPayment,
+      },
     });
   } catch (error) {
-    console.log("Error creating order:", error);
+    console.error("Error creating orders:", error);
     res.status(500).json({ message: error.message });
   }
 };
