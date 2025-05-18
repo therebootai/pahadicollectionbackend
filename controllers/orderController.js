@@ -265,7 +265,7 @@ exports.updateOrderDetails = async (req, res) => {
       },
       {
         $set: {
-          ...(products && { products }),
+          ...(products && { ...products }),
           ...(status && { status }),
           ...(delivery_location && { delivery_location }),
           ...(cancel_message && { cancel_message }),
