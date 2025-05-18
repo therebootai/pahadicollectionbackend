@@ -16,6 +16,10 @@ exports.createNewOrder = async (req, res) => {
       couponId,
       paymentStatus,
       paymentMode,
+      razorpayPaymentId = "",
+      razorpayOrderId = "",
+      signature = "",
+      captured = true,
     } = req.body;
 
     if (!customerId || !products || !totalAmount) {
@@ -70,6 +74,11 @@ exports.createNewOrder = async (req, res) => {
       amount: totalAmount,
       paymentStatus,
       paymentMode,
+      razorpayPaymentId,
+      razorpayOrderId,
+      signature,
+      captured,
+      method: paymentMode,
     });
 
     const savedPayment = await newPayment.save();
@@ -256,6 +265,23 @@ exports.updateOrderDetails = async (req, res) => {
   try {
     const { id } = req.params;
     const { products, status, delivery_location, cancel_message } = req.body;
+    const updatedFields = {};
+
+    if (
+      products &&
+      products.productId && // Make sure productId exists
+      products.quantity != null
+    ) {
+      updatedFields.products = {
+        productId: products.productId,
+        quantity: products.quantity,
+      };
+    }
+
+    if (status) updatedFields.status = status;
+    if (delivery_location) updatedFields.delivery_location = delivery_location;
+    if (cancel_message) updatedFields.cancel_message = cancel_message;
+
     const updatedOrder = await orderModel.findOneAndUpdate(
       {
         $or: [
@@ -263,14 +289,7 @@ exports.updateOrderDetails = async (req, res) => {
           { orderId: id },
         ],
       },
-      {
-        $set: {
-          ...(products && { ...products }),
-          ...(status && { status }),
-          ...(delivery_location && { delivery_location }),
-          ...(cancel_message && { cancel_message }),
-        },
-      },
+      { $set: updatedFields },
       { new: true, runValidators: true }
     );
 

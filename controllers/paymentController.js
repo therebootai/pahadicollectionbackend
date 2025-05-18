@@ -2,7 +2,7 @@ const paymentModel = require("../models/paymentModel");
 
 const Razorpay = require("razorpay");
 const crypto = require("crypto");
-const orderModel = require("../models/orderModel");
+const mongoose = require("mongoose");
 
 const razorpay = new Razorpay({
   key_id: process.env.RAZORPAY_KEY_ID,
@@ -54,8 +54,7 @@ exports.getAllPayments = async (req, res) => {
 
 exports.createRazorpayOrder = async (req, res) => {
   try {
-    const { amount, customerId, orderId, paymentMode } = req.body;
-
+    const { amount, customerId, orderId, paymentMode = "ONLINE" } = req.body;
 
     const options = {
       amount: amount,
@@ -130,9 +129,10 @@ exports.handlePaymentSuccess = async (req, res) => {
       razorpay_payment_id
     );
     const paymentMethod = razorpayPaymentDetails.method;
-    const updatedPayment = await paymentModel.findOneAndUpdate(
-      { paymentId },
-      {
+
+    res.status(200).json({
+      message: "Payment successful",
+      data: {
         razorpayPaymentId: razorpay_payment_id,
         razorpayOrderId: razorpay_order_id,
         paymentStatus: "completed",
@@ -140,19 +140,30 @@ exports.handlePaymentSuccess = async (req, res) => {
         method: paymentMethod,
         captured: true,
       },
-      { new: true }
-    );
-
-    if (!updatedPayment) {
-      return res.status(400).json({ message: "Payment not found." });
-    }
-
-    res.status(200).json({
-      message: "Payment successful",
-      data: updatedPayment,
     });
   } catch (error) {
     console.error("Error handling payment success:", error);
     res.status(500).json({ message: "Payment processing failed" });
+  } finally {
+    await paymentModel.deleteOne({ paymentId: req.body.paymentId });
+  }
+};
+
+exports.handleDeletePayment = async (req, res) => {
+  try {
+    const { id } = req.params;
+
+    await paymentModel.findOneAndDelete({
+      $or: [
+        { paymentId: id },
+        { _id: mongoose.Types.ObjectId.isValid(id) ? id : null },
+        { razorpayOrderId: id },
+        { razorpayPaymentId: id },
+      ],
+    });
+    res.status(200).json({ message: "Payment deleted successfully" });
+  } catch (error) {
+    console.error("Error deleting payment:", error);
+    res.status(500).json({ message: error.message });
   }
 };
