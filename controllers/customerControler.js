@@ -657,6 +657,11 @@ exports.loginCustomer = async (req, res) => {
     if (!(await customer.matchPassword(password))) {
       return res.status(401).json({ message: "Incorrect password" });
     }
+    if (customer.is_disabled) {
+      return res
+        .status(401)
+        .json({ message: "No Permission to Log In. Contact With Admin" });
+    }
     const token = generateToken({ user: customer._id });
     res.cookie("token", token, {
       httpOnly: true,
