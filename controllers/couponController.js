@@ -66,6 +66,7 @@ exports.getAllCoupons = async (req, res) => {
       endDate,
       products,
       usedBy,
+      couponId,
     } = req.query;
     const pageNumber = parseInt(page);
     const limitNumber = parseInt(limit);
@@ -99,6 +100,11 @@ exports.getAllCoupons = async (req, res) => {
       query.usedBy = { $in: usedBy.split(",") };
     }
 
+    // Filter by specific couponId
+    if (couponId) {
+      query.couponId = couponId;
+    }
+
     // Fetch coupons with pagination, sorting, and filtering
     const [coupons, totalCount] = await Promise.all([
       couponModel
@@ -129,7 +135,7 @@ exports.getAllCoupons = async (req, res) => {
 exports.searchCoupons = async (req, res) => {
   try {
     const {
-      query = "", // Search keyword
+      search = "", // Search keyword
       page = 1,
       limit = 10,
       sortBy = "createdAt",
@@ -144,11 +150,11 @@ exports.searchCoupons = async (req, res) => {
     // Build search criteria
     const searchQuery = {
       $or: [
-        { couponId: { $regex: query, $options: "i" } }, // Search in couponId
-        { couponName: { $regex: query, $options: "i" } }, // Search in couponName
-        { discount: isNaN(query) ? undefined : Number(query) }, // Search by discount if numeric
-        { products: query.match(/^[0-9a-fA-F]{24}$/) ? query : undefined }, // Search by product ID
-        { usedBy: query.match(/^[0-9a-fA-F]{24}$/) ? query : undefined }, // Search by user ID
+        { couponId: { $regex: search, $options: "i" } }, // Search in couponId
+        { couponName: { $regex: search, $options: "i" } }, // Search in couponName
+        { discount: isNaN(search) ? undefined : Number(search) }, // Search by discount if numeric
+        { products: search.match(/^[0-9a-fA-F]{24}$/) ? search : undefined }, // Search by product ID
+        { usedBy: search.match(/^[0-9a-fA-F]{24}$/) ? search : undefined }, // Search by user ID
       ].filter(Boolean), // Filter out invalid conditions
     };
 

@@ -16,7 +16,7 @@ couponRouter.post("/", createNewCoupon);
 
 couponRouter.get("/", getAllCoupons);
 
-couponRouter.get("/search", searchCoupons);
+couponRouter.get("/find", searchCoupons);
 
 couponRouter.get("/use/:coupon_code", authenticateUser, getCouponByName);
 
