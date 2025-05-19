@@ -87,12 +87,17 @@ exports.getAllCustomers = async (req, res) => {
       sortBy = "createdAt", // default sorting by createdAt
       order = "desc", // default descending order
       isLogin,
+      customerId,
     } = req.query;
 
     let query = {};
 
     if (isLogin !== undefined) {
       query.isLogin = isLogin === "true" ? true : false;
+    }
+
+    if (customerId) {
+      query.customerId = customerId;
     }
 
     // Pagination setup
@@ -145,6 +150,7 @@ exports.searchCustomers = async (req, res) => {
         { name: { $regex: search, $options: "i" } },
         { email: { $regex: search, $options: "i" } },
         { mobile: { $regex: search, $options: "i" } },
+        { customerId: { $regex: search, $options: "i" } },
         { address: { $elemMatch: { $regex: search, $options: "i" } } },
       ],
     };

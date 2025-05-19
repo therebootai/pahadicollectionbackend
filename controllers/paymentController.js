@@ -18,6 +18,7 @@ exports.getAllPayments = async (req, res) => {
       order = "desc",
       status,
       paymentMode,
+      paymentId,
     } = req.query;
 
     page = parseInt(page);
@@ -26,6 +27,7 @@ exports.getAllPayments = async (req, res) => {
     const filter = {};
     if (status) filter.paymentStatus = status;
     if (paymentMode) filter.paymentMode = paymentMode;
+    if (paymentId) filter.paymentId = paymentId;
 
     const [payments, totalPayments] = await Promise.all([
       paymentModel
@@ -164,6 +166,52 @@ exports.handleDeletePayment = async (req, res) => {
     res.status(200).json({ message: "Payment deleted successfully" });
   } catch (error) {
     console.error("Error deleting payment:", error);
+    res.status(500).json({ message: error.message });
+  }
+};
+
+exports.handelSearchPayment = async (req, res) => {
+  try {
+    let { search, page = 1, limit = 10 } = req.query;
+
+    page = parseInt(page);
+    limit = parseInt(limit);
+
+    if (!search) {
+      return res.status(400).json({ message: "Search query is required" });
+    }
+
+    const payments = await paymentModel
+      .find({
+        $or: [
+          { paymentId: { $regex: search, $options: "i" } },
+          { razorpayOrderId: { $regex: search, $options: "i" } },
+          { razorpayPaymentId: { $regex: search, $options: "i" } },
+        ],
+      })
+      .skip((page - 1) * limit)
+      .limit(limit)
+      .populate("customerId")
+      .populate("orderId");
+
+    const totalPayments = await paymentModel.countDocuments({
+      $or: [
+        { paymentId: { $regex: search, $options: "i" } },
+        { razorpayOrderId: { $regex: search, $options: "i" } },
+        { razorpayPaymentId: { $regex: search, $options: "i" } },
+      ],
+    });
+
+    res.status(200).json({
+      payments,
+      pagination: {
+        totalCount: totalPayments,
+        totalPages: Math.ceil(totalPayments / limit),
+        currentPage: page,
+      },
+    });
+  } catch (error) {
+    console.error("Error searching payment:", error);
     res.status(500).json({ message: error.message });
   }
 };

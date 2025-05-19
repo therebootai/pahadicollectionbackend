@@ -193,6 +193,7 @@ exports.getAllProducts = async (req, res) => {
       tags,
       is_drafted,
       isActive,
+      productId,
     } = req.query;
 
     let query = {};
@@ -233,6 +234,7 @@ exports.getAllProducts = async (req, res) => {
         query.category = null;
       }
     }
+
     if (attribute) {
       const attributeArray = decodeURIComponent(attribute)
         .split(",")
@@ -244,6 +246,10 @@ exports.getAllProducts = async (req, res) => {
       if (attributeDocs.length > 0) {
         query.attribute = { $in: attributeDocs.map((attr) => attr._id) };
       }
+    }
+
+    if (productId) {
+      query.productId = productId;
     }
 
     // Pagination setup
