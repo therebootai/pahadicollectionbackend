@@ -218,6 +218,21 @@ productSchema.pre("validate", async function (next) {
   next();
 });
 
+productSchema.pre("findOneAndUpdate", async function (next) {
+  const update = this.getUpdate();
+
+  if (update.$inc && typeof update.$inc.in_stock === "number") {
+    const currentDoc = await this.model.findOne(this.getQuery());
+    const newStock = currentDoc.in_stock + update.$inc.in_stock;
+
+    if (newStock <= 0) {
+      update.isActive = false;
+    }
+  }
+
+  next();
+});
+
 productSchema.index({ createdAt: -1, isActive: 1 });
 
 module.exports =

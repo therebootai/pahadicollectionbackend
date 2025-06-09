@@ -5,6 +5,7 @@ const paymentModel = require("../models/paymentModel");
 const generateCustomId = require("../middlewares/ganerateCustomId");
 const customerModel = require("../models/customerModel");
 const couponModel = require("../models/couponModel");
+const productModel = require("../models/productModel");
 
 exports.createNewOrder = async (req, res) => {
   try {
@@ -16,6 +17,10 @@ exports.createNewOrder = async (req, res) => {
       couponId,
       paymentStatus,
       paymentMode,
+      razorpayPaymentId = "",
+      razorpayOrderId = "",
+      signature = "",
+      captured = true,
     } = req.body;
 
     if (!customerId || !products || !totalAmount) {
@@ -29,6 +34,52 @@ exports.createNewOrder = async (req, res) => {
     )}-${now.getFullYear()}-${pad(now.getHours())}-${pad(
       now.getMinutes()
     )}-${pad(now.getSeconds())}`;
+
+    const insufficientStock = [];
+
+    for (const item of products) {
+      const product = await productModel.findById(item.productId);
+
+      if (!product) {
+        return res
+          .status(404)
+          .json({ message: `Product ${item.productId} not found` });
+      }
+
+      if (product.in_stock < item.quantity) {
+        insufficientStock.push({
+          productId: item.productId,
+          available: product.in_stock,
+          requested: item.quantity,
+        });
+      }
+    }
+
+    if (insufficientStock.length > 0) {
+      return res.status(400).json({
+        message:
+          "Some products are out of stock or have insufficient quantity.",
+        insufficientStock,
+      });
+    }
+
+    // Update in_stock for each product
+    await Promise.all(
+      products.map(async ({ productId, quantity }) => {
+        const product = await productModel.findById(productId);
+
+        const newStock = product.in_stock - quantity;
+
+        await productModel.findByIdAndUpdate(
+          productId,
+          {
+            $inc: { in_stock: -quantity },
+            ...(newStock <= 0 ? { isActive: false } : {}),
+          },
+          { new: true }
+        );
+      })
+    );
 
     // Step 1: Generate orderIds and create orders
     const orderPromises = products.map(async (product, index) => {
@@ -70,6 +121,11 @@ exports.createNewOrder = async (req, res) => {
       amount: totalAmount,
       paymentStatus,
       paymentMode,
+      razorpayPaymentId,
+      razorpayOrderId,
+      signature,
+      captured,
+      method: paymentMode,
     });
 
     const savedPayment = await newPayment.save();
@@ -129,6 +185,7 @@ exports.getAllOrders = async (req, res) => {
       order = "desc",
       status,
       customerId,
+      orderId,
     } = req.query;
 
     page = parseInt(page);
@@ -137,6 +194,7 @@ exports.getAllOrders = async (req, res) => {
     const filter = {};
     if (status) filter.status = status;
     if (customerId) filter.customerId = customerId;
+    if (orderId) filter.orderId = orderId;
 
     const orders = await orderModel
       .find(filter)
@@ -256,27 +314,66 @@ exports.updateOrderDetails = async (req, res) => {
   try {
     const { id } = req.params;
     const { products, status, delivery_location, cancel_message } = req.body;
+    const updatedFields = {};
+
+    // Validate ID
+    const query = mongoose.Types.ObjectId.isValid(id)
+      ? { _id: id }
+      : { orderId: id };
+
+    // Fetch the existing order to access its current data
+    const existingOrder = await orderModel.findOne(query);
+
+    if (!existingOrder) {
+      return res.status(404).json({ message: "Order not found" });
+    }
+
+    // If products are being updated
+    if (products && products.productId && products.quantity != null) {
+      updatedFields.products = {
+        productId: products.productId,
+        quantity: products.quantity,
+      };
+    }
+
+    if (status) updatedFields.status = status;
+    if (delivery_location) updatedFields.delivery_location = delivery_location;
+    if (cancel_message) updatedFields.cancel_message = cancel_message;
+
+    // If status indicates refund/cancellation, restore stock
+    const refundStatuses = [
+      "canceled",
+      "canceled_and_refunded",
+      "return_and_refunded",
+    ];
+    const isRefundStatus =
+      status && refundStatuses.includes(status.toLowerCase());
+
+    if (isRefundStatus) {
+      const productToUpdate = await productModel.findById(
+        existingOrder.products.productId
+      );
+      if (productToUpdate) {
+        await productModel.findByIdAndUpdate(
+          productToUpdate._id,
+          {
+            $inc: { in_stock: existingOrder.products.quantity },
+            ...(productToUpdate.in_stock + existingOrder.products.quantity > 0
+              ? { isActive: true }
+              : {}),
+          },
+          { new: true }
+        );
+      }
+    }
+
+    // Update the order
     const updatedOrder = await orderModel.findOneAndUpdate(
-      {
-        $or: [
-          { _id: mongoose.Types.ObjectId.isValid(id) ? id : null },
-          { orderId: id },
-        ],
-      },
-      {
-        $set: {
-          ...(products && { products }),
-          ...(status && { status }),
-          ...(delivery_location && { delivery_location }),
-          ...(cancel_message && { cancel_message }),
-        },
-      },
+      query,
+      { $set: updatedFields },
       { new: true, runValidators: true }
     );
 
-    if (!updatedOrder) {
-      return res.status(404).json({ message: "Order not found" });
-    }
     res.status(200).json({
       message: "Order details updated successfully",
       order: updatedOrder,
